@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+    <title>نقطة البيع - {{ config('app.name') }}</title>
+    <meta name="csrf-token" content="{{ csrf_token() }}">
+    @vite(['resources/css/app.css', 'resources/js/app.js'])
+</head>
+<body class="bg-slate-100 text-slate-800 antialiased h-screen overflow-hidden">
+    <div class="flex h-screen flex-col">
+        <header class="flex items-center justify-between bg-emerald-900 text-white px-4 py-3 shrink-0">
+            <div class="flex items-center gap-3">
+                <div class="flex h-9 w-9 items-center justify-center rounded-full bg-white text-emerald-900 font-extrabold text-sm shrink-0">
+                    يز
+                </div>
+                <div class="font-bold">اليزوري ماركت — نقطة البيع</div>
+            </div>
+            <div class="flex items-center gap-2">
+                <button type="button" id="open-customer-display-btn"
+                        class="touch-btn rounded-lg bg-emerald-700 px-4 py-3 text-sm font-semibold hover:bg-emerald-600">
+                    فتح شاشة الزبون
+                </button>
+                <a href="{{ route('dashboard') }}" class="touch-btn rounded-lg bg-emerald-800 px-4 py-3 text-sm font-semibold hover:bg-emerald-700">
+                    رجوع للوحة التحكم
+                </a>
+            </div>
+        </header>
+
+        @yield('content')
+    </div>
+</body>
+</html>

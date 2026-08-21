@@ -1,0 +1,14 @@
+* text=auto eol=lf
+
+*.blade.php diff=html
+*.css diff=css
+*.html diff=html
+*.md diff=markdown
+*.php diff=php
+
+# Windows batch launcher requires CRLF or cmd.exe mis-parses multi-line blocks
+*.bat text eol=crlf
+
+/.github export-ignore
+CHANGELOG.md export-ignore
+.styleci.yml export-ignore
