@@ -15,15 +15,10 @@
         }
         .center { text-align: center; }
         .logo-badge {
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            width: 44px;
-            height: 44px;
+            width: 54px;
+            height: 54px;
             border-radius: 50%;
-            border: 2px solid #000;
-            font-weight: bold;
-            font-size: 16px;
+            object-fit: cover;
             margin-bottom: 4px;
         }
         h1 { font-size: 15px; margin: 4px 0 0; }
@@ -59,7 +54,7 @@
 </head>
 <body>
     <div class="center">
-        <div class="logo-badge">يز</div>
+        <img class="logo-badge" src="{{ asset('images/logo.png') }}" alt="اليزوري ماركت">
         <h1>اليزوري ماركت</h1>
         <div class="sub">Al-Yazori Market</div>
     </div>

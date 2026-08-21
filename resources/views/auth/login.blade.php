@@ -4,14 +4,13 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
     <title>تسجيل الدخول - {{ config('app.name') }}</title>
+    <link rel="icon" type="image/png" href="{{ asset('images/logo.png') }}">
     @vite(['resources/css/app.css', 'resources/js/app.js'])
 </head>
 <body class="min-h-screen bg-gradient-to-br from-emerald-900 via-emerald-800 to-emerald-950 flex items-center justify-center p-4">
     <div class="w-full max-w-sm">
         <div class="flex flex-col items-center mb-8 text-center">
-            <div class="flex h-24 w-24 items-center justify-center rounded-full bg-white text-emerald-900 font-extrabold text-4xl shadow-lg mb-4">
-                يز
-            </div>
+            <img src="{{ asset('images/logo.png') }}" alt="اليزوري ماركت" class="h-28 w-28 rounded-full shadow-lg mb-4 object-cover">
             <h1 class="text-2xl font-extrabold text-white">اليزوري ماركت</h1>
             <p class="text-emerald-200 text-sm mt-1">Al-Yazori Market</p>
         </div>

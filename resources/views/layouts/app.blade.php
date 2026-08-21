@@ -5,15 +5,14 @@
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
     <title>@yield('title', 'الرئيسية') - {{ config('app.name') }}</title>
     <meta name="csrf-token" content="{{ csrf_token() }}">
+    <link rel="icon" type="image/png" href="{{ asset('images/logo.png') }}">
     @vite(['resources/css/app.css', 'resources/js/app.js'])
 </head>
 <body class="bg-slate-100 text-slate-800 antialiased">
     <div class="flex min-h-screen">
         <aside class="hidden md:flex md:w-60 md:flex-col bg-emerald-900 text-emerald-50">
             <div class="flex items-center gap-3 px-5 py-5 border-b border-emerald-800">
-                <div class="flex h-11 w-11 items-center justify-center rounded-full bg-emerald-50 text-emerald-900 font-extrabold text-lg shrink-0">
-                    يز
-                </div>
+                <img src="{{ asset('images/logo.png') }}" alt="اليزوري ماركت" class="h-11 w-11 rounded-full shrink-0 object-cover">
                 <div class="leading-tight">
                     <div class="font-bold">اليزوري ماركت</div>
                     <div class="text-xs text-emerald-300">Al-Yazori Market</div>

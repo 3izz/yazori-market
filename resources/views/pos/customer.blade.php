@@ -4,6 +4,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
     <title>شاشة الزبون - {{ config('app.name') }}</title>
+    <link rel="icon" type="image/png" href="{{ asset('images/logo.png') }}">
     @vite(['resources/css/app.css', 'resources/js/app.js'])
 </head>
 <body class="h-screen w-screen overflow-hidden bg-emerald-950 text-white select-none">
@@ -14,9 +15,7 @@
 
     {{-- Idle screen --}}
     <div id="idle-screen" class="h-screen w-screen flex flex-col items-center justify-center gap-6">
-        <div class="flex h-32 w-32 items-center justify-center rounded-full bg-white text-emerald-900 font-extrabold text-5xl shadow-2xl">
-            يز
-        </div>
+        <img src="{{ asset('images/logo.png') }}" alt="اليزوري ماركت" class="h-32 w-32 rounded-full shadow-2xl object-cover">
         <div class="text-center">
             <h1 class="text-4xl font-extrabold">مرحباً بكم في اليزوري ماركت</h1>
             <p class="text-emerald-300 text-xl mt-2">Welcome to Al-Yazori Market</p>
