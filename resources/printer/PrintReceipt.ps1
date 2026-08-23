@@ -75,6 +75,48 @@ public static string SendBytes(string printerName, byte[] data) {
     ClosePrinter(hPrinter);
     return ok ? ("OK:" + written) : ("ERROR:WritePrinter:" + Marshal.GetLastWin32Error());
 }
+
+// PowerShell interpretes script-block loops instead of JIT-compiling them like
+// a normal .NET method, and a fresh (cold) PowerShell process pays that cost in
+// full every time - a few hundred thousand iterations here took upwards of ten
+// seconds in a cold process despite running in a fraction of a second inside an
+// already-warmed-up session. Doing the actual pixel work in compiled C# instead
+// removes that gap entirely, regardless of how "cold" the host process is.
+public static byte[] ConvertToRaster(byte[] pixels, int width, int height, int stride, out int croppedHeight) {
+    int lastContentRow = 0;
+    for (int y = height - 1; y >= 0; y--) {
+        int rowStart = y * stride;
+        bool rowHasContent = false;
+        for (int x = 0; x < width; x += 4) {
+            int offset = rowStart + (x * 4);
+            int sum = pixels[offset] + pixels[offset + 1] + pixels[offset + 2];
+            if (sum < 740) { rowHasContent = true; break; }
+        }
+        if (rowHasContent) { lastContentRow = y; break; }
+    }
+
+    croppedHeight = Math.Min(lastContentRow + 24, height);
+    if (croppedHeight < 10) { croppedHeight = height; }
+
+    int widthBytes = (width + 7) / 8;
+    byte[] imageData = new byte[widthBytes * croppedHeight];
+
+    for (int y = 0; y < croppedHeight; y++) {
+        int rowStart = y * stride;
+        int outRowStart = y * widthBytes;
+        for (int x = 0; x < width; x++) {
+            int offset = rowStart + (x * 4);
+            double lum = 0.299 * pixels[offset + 2] + 0.587 * pixels[offset + 1] + 0.114 * pixels[offset];
+            if (lum < 200) {
+                int byteIndex = outRowStart + (x / 8);
+                int bitIndex = 7 - (x % 8);
+                imageData[byteIndex] |= (byte)(1 << bitIndex);
+            }
+        }
+    }
+
+    return imageData;
+}
 "@
 }
 
@@ -134,38 +176,9 @@ try {
     $bmp.UnlockBits($bmpData)
     $bmp.Dispose()
 
-    # Trim trailing blank rows so we don't waste paper/time on 4000px of white space.
-    $lastContentRow = 0
-    for ($y = $rawHeight - 1; $y -ge 0; $y--) {
-        $rowStart = $y * $stride
-        $rowHasContent = $false
-        for ($x = 0; $x -lt $width; $x += 4) {
-            $offset = $rowStart + ($x * 4)
-            $sum = [int]$pixels[$offset] + [int]$pixels[$offset + 1] + [int]$pixels[$offset + 2]
-            if ($sum -lt 740) { $rowHasContent = $true; break }
-        }
-        if ($rowHasContent) { $lastContentRow = $y; break }
-    }
-
-    $height = [Math]::Min($lastContentRow + 24, $rawHeight)
-    if ($height -lt 10) { $height = $rawHeight }
-
+    $height = 0
+    $imageData = [POS.RawPrinter]::ConvertToRaster($pixels, $width, $rawHeight, $stride, [ref]$height)
     $widthBytes = [Math]::Ceiling($width / 8)
-    $imageData = New-Object byte[] ($widthBytes * $height)
-
-    for ($y = 0; $y -lt $height; $y++) {
-        $rowStart = $y * $stride
-        $outRowStart = $y * $widthBytes
-        for ($x = 0; $x -lt $width; $x++) {
-            $offset = $rowStart + ($x * 4)
-            $lum = 0.299 * $pixels[$offset + 2] + 0.587 * $pixels[$offset + 1] + 0.114 * $pixels[$offset]
-            if ($lum -lt 200) {
-                $byteIndex = $outRowStart + [Math]::Floor($x / 8)
-                $bitIndex = 7 - ($x % 8)
-                $imageData[$byteIndex] = $imageData[$byteIndex] -bor (1 -shl $bitIndex)
-            }
-        }
-    }
 
     $esc = [byte]27
     $gs = [byte]29

@@ -30,6 +30,15 @@
                 <span>الإجمالي</span>
                 <span id="total-value">0.00</span>
             </div>
+            <div class="flex items-center justify-between text-sm gap-3 pt-1">
+                <label for="paid-input" class="text-slate-500 shrink-0">المبلغ المدفوع</label>
+                <input type="number" id="paid-input" min="0" step="0.01" placeholder="0.00"
+                       class="w-28 rounded-lg border border-slate-300 px-3 py-2 text-left">
+            </div>
+            <div class="flex items-center justify-between text-lg font-bold text-slate-700">
+                <span>الباقي للزبون</span>
+                <span id="change-value">0.00</span>
+            </div>
             <button id="checkout-btn" type="button"
                     class="touch-btn w-full rounded-xl bg-emerald-700 text-white font-extrabold text-xl py-4 mt-2 hover:bg-emerald-800 active:bg-emerald-900 disabled:opacity-40">
                 إتمام البيع وطباعة الفاتورة
@@ -101,6 +110,8 @@
     const subtotalValue = document.getElementById('subtotal-value');
     const totalValue = document.getElementById('total-value');
     const discountInput = document.getElementById('discount-input');
+    const paidInput = document.getElementById('paid-input');
+    const changeValue = document.getElementById('change-value');
     const checkoutBtn = document.getElementById('checkout-btn');
     const clearBtn = document.getElementById('clear-btn');
     const customerNameInput = document.getElementById('customer-name');
@@ -165,6 +176,24 @@
         return (Math.round(n * 100) / 100).toFixed(2);
     }
 
+    function updateChange(total) {
+        const paid = parseFloat(paidInput.value);
+        const change = (isNaN(paid) ? total : paid) - total;
+        changeValue.textContent = money(change);
+        changeValue.className = change < 0 ? 'text-red-600' : '';
+    }
+
+    paidInput.addEventListener('input', () => updateChange(parseFloat(totalValue.textContent) || 0));
+
+    // Selecting the existing value on focus means tapping a numeric field lets
+    // the cashier just type over it, instead of having to position the cursor
+    // and delete each digit by hand.
+    function selectAllOnFocus(el) {
+        el.addEventListener('focus', () => el.select());
+    }
+
+    [discountInput, paidInput, unknownPriceInput].forEach(selectAllOnFocus);
+
     const toastEl = document.getElementById('toast');
     let toastTimer = null;
 
@@ -180,6 +209,7 @@
         cart.clear();
         customerNameInput.value = '';
         discountInput.value = 0;
+        paidInput.value = '';
         renderCart();
         focusBarcode();
     }
@@ -315,6 +345,7 @@
 
         subtotalValue.textContent = money(subtotal);
         totalValue.textContent = money(total);
+        updateChange(total);
         checkoutBtn.disabled = cart.size === 0;
 
         if (cart.size === 0) {
@@ -433,6 +464,7 @@
                 body: JSON.stringify({
                     customer_name: customerNameInput.value.trim() || null,
                     discount: parseFloat(discountInput.value) || 0,
+                    paid_amount: paidInput.value.trim() === '' ? null : parseFloat(paidInput.value),
                     items: Array.from(cart.values()).map((line) => (
                         line.isCustom
                             ? { name: line.name, price: line.price, quantity: line.quantity }

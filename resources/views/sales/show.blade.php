@@ -59,6 +59,16 @@
                     <td colspan="3" class="px-4 py-2 text-left font-bold text-emerald-700">الإجمالي</td>
                     <td class="px-4 py-2 font-bold text-emerald-700">{{ number_format($sale->total, 2) }}</td>
                 </tr>
+                @if ($sale->paid_amount > $sale->total)
+                    <tr class="bg-slate-50">
+                        <td colspan="3" class="px-4 py-2 text-left font-semibold">المدفوع</td>
+                        <td class="px-4 py-2 font-semibold">{{ number_format($sale->paid_amount, 2) }}</td>
+                    </tr>
+                    <tr class="bg-slate-50">
+                        <td colspan="3" class="px-4 py-2 text-left font-semibold">الباقي</td>
+                        <td class="px-4 py-2 font-semibold">{{ number_format($sale->paid_amount - $sale->total, 2) }}</td>
+                    </tr>
+                @endif
             </tfoot>
         </table>
     </div>

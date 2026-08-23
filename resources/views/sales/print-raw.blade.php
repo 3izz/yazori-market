@@ -16,8 +16,8 @@
         }
         .center { text-align: center; }
         .logo-badge {
-            width: 110px;
-            height: 110px;
+            width: 190px;
+            height: 190px;
             border-radius: 50%;
             object-fit: cover;
             margin-bottom: 8px;
@@ -88,6 +88,16 @@
                 <td colspan="3">الإجمالي</td>
                 <td>{{ number_format($sale->total, 2) }}</td>
             </tr>
+            @if ($sale->paid_amount > $sale->total)
+                <tr>
+                    <td colspan="3">المدفوع</td>
+                    <td>{{ number_format($sale->paid_amount, 2) }}</td>
+                </tr>
+                <tr>
+                    <td colspan="3">الباقي</td>
+                    <td>{{ number_format($sale->paid_amount - $sale->total, 2) }}</td>
+                </tr>
+            @endif
         </tfoot>
     </table>
 
