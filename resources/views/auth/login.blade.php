@@ -10,8 +10,8 @@
 <body class="min-h-screen bg-gradient-to-br from-emerald-900 via-emerald-800 to-emerald-950 flex items-center justify-center p-4">
     <div class="w-full max-w-sm">
         <div class="flex flex-col items-center mb-8 text-center">
-            <img src="{{ asset('images/logo.png') }}" alt="اليزوري ماركت" class="h-28 w-28 rounded-full shadow-lg mb-4 object-cover">
-            <h1 class="text-2xl font-extrabold text-white">اليزوري ماركت</h1>
+            <img src="{{ asset('images/logo.png') }}" alt="اليازوري ماركت" class="h-28 w-28 rounded-full shadow-lg mb-4 object-cover">
+            <h1 class="text-2xl font-extrabold text-white">اليازوري ماركت</h1>
             <p class="text-emerald-200 text-sm mt-1">Al-Yazori Market</p>
         </div>
 

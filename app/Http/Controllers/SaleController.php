@@ -3,6 +3,8 @@
 namespace App\Http\Controllers;
 
 use App\Models\Sale;
+use App\Services\ThermalPrintService;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
 
@@ -33,5 +35,12 @@ class SaleController extends Controller
         $sale->load('items');
 
         return view('sales.print', compact('sale'));
+    }
+
+    public function printThermal(Sale $sale, ThermalPrintService $printer): JsonResponse
+    {
+        $result = $printer->printSale($sale);
+
+        return response()->json($result, $result['success'] ? 200 : 422);
     }
 }

@@ -59,7 +59,9 @@ class PosController extends Controller
             'discount' => ['nullable', 'numeric', 'min:0'],
             'paid_amount' => ['nullable', 'numeric', 'min:0'],
             'items' => ['required', 'array', 'min:1'],
-            'items.*.product_id' => ['required', 'integer', 'exists:products,id'],
+            'items.*.product_id' => ['nullable', 'integer', 'exists:products,id'],
+            'items.*.name' => ['required_without:items.*.product_id', 'nullable', 'string', 'max:150'],
+            'items.*.price' => ['required_without:items.*.product_id', 'nullable', 'numeric', 'min:0'],
             'items.*.quantity' => ['required', 'integer', 'min:1'],
         ]);
 
@@ -68,19 +70,27 @@ class PosController extends Controller
             $lines = [];
 
             foreach ($data['items'] as $item) {
-                $product = Product::query()->lockForUpdate()->findOrFail($item['product_id']);
-
-                if ($product->quantity < $item['quantity']) {
-                    abort(422, "الكمية المتوفرة من \"{$product->name}\" غير كافية (المتوفر: {$product->quantity})");
+                if (! empty($item['product_id'])) {
+                    $product = Product::query()->lockForUpdate()->findOrFail($item['product_id']);
+                    $price = $product->sale_price;
+                    $name = $product->name;
+                    $barcode = $product->barcode;
+                } else {
+                    $product = null;
+                    $price = $item['price'];
+                    $name = $item['name'] ?: 'صنف بدون اسم';
+                    $barcode = null;
                 }
 
-                $lineSubtotal = $product->sale_price * $item['quantity'];
+                $lineSubtotal = $price * $item['quantity'];
                 $subtotal += $lineSubtotal;
 
                 $lines[] = [
                     'product' => $product,
+                    'name' => $name,
+                    'barcode' => $barcode,
                     'quantity' => $item['quantity'],
-                    'price' => $product->sale_price,
+                    'price' => $price,
                     'subtotal' => $lineSubtotal,
                 ];
             }
@@ -103,21 +113,24 @@ class PosController extends Controller
             foreach ($lines as $line) {
                 SaleItem::create([
                     'sale_id' => $sale->id,
-                    'product_id' => $line['product']->id,
-                    'product_name' => $line['product']->name,
-                    'barcode' => $line['product']->barcode,
+                    'product_id' => $line['product']?->id,
+                    'product_name' => $line['name'],
+                    'barcode' => $line['barcode'],
                     'price' => $line['price'],
                     'quantity' => $line['quantity'],
                     'subtotal' => $line['subtotal'],
                 ]);
 
-                $line['product']->decrement('quantity', $line['quantity']);
+                $line['product']?->decrement('quantity', $line['quantity']);
             }
 
             return $sale;
         });
 
-        return response()->json(['redirect' => route('sales.print', $sale)]);
+        return response()->json([
+            'redirect' => route('sales.print', $sale),
+            'sale_id' => $sale->id,
+        ]);
     }
 
     private function formatProduct(Product $product): array

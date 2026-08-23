@@ -15,9 +15,9 @@
 
     {{-- Idle screen --}}
     <div id="idle-screen" class="h-screen w-screen flex flex-col items-center justify-center gap-6">
-        <img src="{{ asset('images/logo.png') }}" alt="اليزوري ماركت" class="h-32 w-32 rounded-full shadow-2xl object-cover">
+        <img src="{{ asset('images/logo.png') }}" alt="اليازوري ماركت" class="h-32 w-32 rounded-full shadow-2xl object-cover">
         <div class="text-center">
-            <h1 class="text-4xl font-extrabold">مرحباً بكم في اليزوري ماركت</h1>
+            <h1 class="text-4xl font-extrabold">مرحباً بكم في اليازوري ماركت</h1>
             <p class="text-emerald-300 text-xl mt-2">Welcome to Al-Yazori Market</p>
         </div>
         <div id="clock" class="text-emerald-400 text-2xl font-mono mt-6"></div>

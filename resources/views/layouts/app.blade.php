@@ -12,9 +12,9 @@
     <div class="flex min-h-screen">
         <aside class="hidden md:flex md:w-60 md:flex-col bg-emerald-900 text-emerald-50">
             <div class="flex items-center gap-3 px-5 py-5 border-b border-emerald-800">
-                <img src="{{ asset('images/logo.png') }}" alt="اليزوري ماركت" class="h-11 w-11 rounded-full shrink-0 object-cover">
+                <img src="{{ asset('images/logo.png') }}" alt="اليازوري ماركت" class="h-11 w-11 rounded-full shrink-0 object-cover">
                 <div class="leading-tight">
-                    <div class="font-bold">اليزوري ماركت</div>
+                    <div class="font-bold">اليازوري ماركت</div>
                     <div class="text-xs text-emerald-300">Al-Yazori Market</div>
                 </div>
             </div>
@@ -48,7 +48,7 @@
 
         <div class="flex flex-1 flex-col min-w-0">
             <header class="flex items-center justify-between bg-white px-4 py-3 shadow-sm md:hidden">
-                <div class="font-bold text-emerald-900">اليزوري ماركت</div>
+                <div class="font-bold text-emerald-900">اليازوري ماركت</div>
                 <a href="{{ route('pos.index') }}" class="rounded-lg bg-emerald-700 px-4 py-2 text-sm font-semibold text-white">نقطة البيع</a>
             </header>
 

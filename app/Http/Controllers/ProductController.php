@@ -4,6 +4,8 @@ namespace App\Http\Controllers;
 
 use App\Models\Category;
 use App\Models\Product;
+use App\Services\ThermalPrintService;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
@@ -68,6 +70,17 @@ class ProductController extends Controller
         $product->delete();
 
         return back()->with('status', 'تم حذف المنتج');
+    }
+
+    public function printBarcode(Product $product, ThermalPrintService $printer): JsonResponse
+    {
+        if (! $product->barcode) {
+            return response()->json(['success' => false, 'message' => 'هاد المنتج ما إله باركود بعد، ولّد باركود واحفظ أولاً'], 422);
+        }
+
+        $result = $printer->printBarcodeLabel($product);
+
+        return response()->json($result, $result['success'] ? 200 : 422);
     }
 
     private function validateData(Request $request, ?Product $product = null): array

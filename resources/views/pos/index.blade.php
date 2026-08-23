@@ -1,6 +1,8 @@
 @extends('layouts.pos')
 
 @section('content')
+<div id="toast" class="hidden fixed top-4 left-1/2 -translate-x-1/2 z-50 rounded-xl px-6 py-4 text-white font-bold text-lg shadow-lg"></div>
+
 <div class="flex flex-1 min-h-0 flex-col md:flex-row-reverse">
 
     {{-- Cart panel --}}
@@ -51,7 +53,38 @@
         </div>
 
         <p id="search-message" class="text-center text-slate-400 hidden"></p>
+
+        <button type="button" id="unknown-product-btn"
+                class="touch-btn w-full rounded-xl bg-amber-500 text-white font-bold py-4 text-lg hover:bg-amber-600">
+            + بيع صنف بدون باركود (سعر يدوي)
+        </button>
     </section>
+</div>
+
+<div id="unknown-product-modal" class="hidden fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4">
+    <div class="bg-white rounded-2xl p-6 w-full max-w-sm space-y-4">
+        <h3 class="text-lg font-bold text-slate-800">بيع صنف بدون باركود</h3>
+        <div>
+            <label class="block text-sm font-semibold text-slate-700 mb-1">اسم الصنف (اختياري)</label>
+            <input type="text" id="unknown-name" placeholder="صنف بدون اسم"
+                   class="w-full rounded-lg border border-slate-300 px-4 py-3 text-lg">
+        </div>
+        <div>
+            <label class="block text-sm font-semibold text-slate-700 mb-1">السعر</label>
+            <input type="number" id="unknown-price" min="0" step="0.01" inputmode="decimal"
+                   class="w-full rounded-lg border border-slate-300 px-4 py-3 text-lg">
+        </div>
+        <div class="flex gap-3 pt-2">
+            <button type="button" id="unknown-add-btn"
+                    class="touch-btn flex-1 rounded-xl bg-emerald-700 text-white font-bold py-3 text-lg hover:bg-emerald-800">
+                إضافة للسلة
+            </button>
+            <button type="button" id="unknown-cancel-btn"
+                    class="touch-btn flex-1 rounded-xl bg-slate-200 text-slate-700 font-bold py-3 text-lg hover:bg-slate-300">
+                إلغاء
+            </button>
+        </div>
+    </div>
 </div>
 
 <script>
@@ -72,6 +105,12 @@
     const clearBtn = document.getElementById('clear-btn');
     const customerNameInput = document.getElementById('customer-name');
     const openCustomerDisplayBtn = document.getElementById('open-customer-display-btn');
+    const unknownProductBtn = document.getElementById('unknown-product-btn');
+    const unknownProductModal = document.getElementById('unknown-product-modal');
+    const unknownNameInput = document.getElementById('unknown-name');
+    const unknownPriceInput = document.getElementById('unknown-price');
+    const unknownAddBtn = document.getElementById('unknown-add-btn');
+    const unknownCancelBtn = document.getElementById('unknown-cancel-btn');
 
     const customerChannel = 'BroadcastChannel' in window ? new BroadcastChannel('alyazori-pos-display') : null;
 
@@ -100,12 +139,49 @@
         customerChannel.postMessage({ type: 'completed', total });
     }
 
-    openCustomerDisplayBtn.addEventListener('click', () => {
-        window.open('{{ route('pos.customer') }}', 'alyazoriCustomerDisplay', 'width=1024,height=768');
+    openCustomerDisplayBtn.addEventListener('click', async () => {
+        const url = '{{ route('pos.customer') }}';
+
+        if ('getScreenDetails' in window) {
+            try {
+                const details = await window.getScreenDetails();
+
+                if (details.screens.length > 1) {
+                    const target = details.screens.find((s) => !s.isPrimary) || details.screens[details.screens.length - 1];
+                    const features = `left=${target.availLeft},top=${target.availTop},width=${target.availWidth},height=${target.availHeight}`;
+                    window.open(url, 'alyazoriCustomerDisplay', features);
+                    return;
+                }
+            } catch (e) {
+                // Permission denied or unsupported: fall back to manual placement below.
+            }
+        }
+
+        window.open(url, 'alyazoriCustomerDisplay', 'width=1024,height=768');
+        alert('اسحب النافذة الجديدة إلى شاشة الزبون، ثم اضغط زر "ملء الشاشة" الموجود داخلها.');
     });
 
     function money(n) {
         return (Math.round(n * 100) / 100).toFixed(2);
+    }
+
+    const toastEl = document.getElementById('toast');
+    let toastTimer = null;
+
+    function showToast(message, isError) {
+        clearTimeout(toastTimer);
+        toastEl.textContent = message;
+        toastEl.className = 'fixed top-4 left-1/2 -translate-x-1/2 z-50 rounded-xl px-6 py-4 text-white font-bold text-lg shadow-lg '
+            + (isError ? 'bg-red-600' : 'bg-emerald-700');
+        toastTimer = setTimeout(() => toastEl.classList.add('hidden'), 4000);
+    }
+
+    function resetSaleForm() {
+        cart.clear();
+        customerNameInput.value = '';
+        discountInput.value = 0;
+        renderCart();
+        focusBarcode();
     }
 
     function focusBarcode() {
@@ -114,12 +190,6 @@
 
     function addProductToCart(product) {
         const existing = cart.get(product.id);
-        const currentQty = existing ? existing.quantity : 0;
-
-        if (currentQty + 1 > product.quantity) {
-            alert(`الكمية المتوفرة من "${product.name}" غير كافية بالمخزون (المتوفر: ${product.quantity})`);
-            return;
-        }
 
         if (existing) {
             existing.quantity += 1;
@@ -130,6 +200,46 @@
         renderCart();
     }
 
+    unknownProductBtn.addEventListener('click', () => {
+        unknownNameInput.value = '';
+        unknownPriceInput.value = '';
+        unknownProductModal.classList.remove('hidden');
+        unknownProductModal.classList.add('flex');
+        unknownPriceInput.focus();
+    });
+
+    function closeUnknownProductModal() {
+        unknownProductModal.classList.add('hidden');
+        unknownProductModal.classList.remove('flex');
+        focusBarcode();
+    }
+
+    unknownCancelBtn.addEventListener('click', closeUnknownProductModal);
+
+    unknownAddBtn.addEventListener('click', () => {
+        const price = parseFloat(unknownPriceInput.value);
+
+        if (isNaN(price) || price < 0) {
+            alert('الرجاء إدخال سعر صحيح');
+            unknownPriceInput.focus();
+            return;
+        }
+
+        const name = unknownNameInput.value.trim() || 'صنف بدون اسم';
+        const id = `custom-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+
+        cart.set(id, { id, name, price, quantity: 1, isCustom: true });
+        renderCart();
+        closeUnknownProductModal();
+    });
+
+    unknownPriceInput.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            unknownAddBtn.click();
+        }
+    });
+
     function changeQuantity(id, delta) {
         const line = cart.get(id);
         if (!line) return;
@@ -138,9 +248,6 @@
 
         if (newQty <= 0) {
             cart.delete(id);
-        } else if (newQty > line.quantity_available) {
-            alert(`الكمية المتوفرة غير كافية (المتوفر: ${line.quantity_available})`);
-            return;
         } else {
             line.quantity = newQty;
         }
@@ -154,10 +261,6 @@
 
         let qty = parseInt(value, 10);
         if (isNaN(qty) || qty < 1) qty = 1;
-        if (qty > line.quantity_available) {
-            qty = line.quantity_available;
-            alert(`الكمية المتوفرة غير كافية (المتوفر: ${line.quantity_available})`);
-        }
 
         line.quantity = qty;
         renderCart();
@@ -330,10 +433,11 @@
                 body: JSON.stringify({
                     customer_name: customerNameInput.value.trim() || null,
                     discount: parseFloat(discountInput.value) || 0,
-                    items: Array.from(cart.values()).map((line) => ({
-                        product_id: line.id,
-                        quantity: line.quantity,
-                    })),
+                    items: Array.from(cart.values()).map((line) => (
+                        line.isCustom
+                            ? { name: line.name, price: line.price, quantity: line.quantity }
+                            : { product_id: line.id, quantity: line.quantity }
+                    )),
                 }),
             });
 
@@ -341,15 +445,35 @@
 
             if (!res.ok) {
                 alert(data.message || 'تعذر إتمام عملية البيع');
-                checkoutBtn.disabled = false;
-                checkoutBtn.textContent = 'إتمام البيع وطباعة الفاتورة';
                 return;
             }
 
             broadcastCompleted(parseFloat(totalValue.textContent) || 0);
-            window.location.href = data.redirect;
+
+            checkoutBtn.textContent = 'جارٍ الطباعة...';
+            try {
+                const printRes = await fetch(`/sales/${data.sale_id}/print-thermal`, {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRF-TOKEN': csrfToken,
+                        'Accept': 'application/json',
+                    },
+                });
+                const printData = await printRes.json();
+                if (printRes.ok) {
+                    showToast('تم البيع وطباعة الفاتورة بنجاح ✓', false);
+                } else {
+                    showToast('تم حفظ البيع، لكن تعذرت الطباعة: ' + (printData.message || ''), true);
+                }
+            } catch (e) {
+                showToast('تم حفظ البيع، لكن تعذر الاتصال بالطابعة.', true);
+            }
+
+            resetSaleForm();
+            broadcastIdle();
         } catch (e) {
             alert('حدث خطأ أثناء إتمام عملية البيع');
+        } finally {
             checkoutBtn.disabled = false;
             checkoutBtn.textContent = 'إتمام البيع وطباعة الفاتورة';
         }

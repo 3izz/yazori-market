@@ -12,8 +12,8 @@
     <div class="flex h-screen flex-col">
         <header class="flex items-center justify-between bg-emerald-900 text-white px-4 py-3 shrink-0">
             <div class="flex items-center gap-3">
-                <img src="{{ asset('images/logo.png') }}" alt="اليزوري ماركت" class="h-9 w-9 rounded-full shrink-0 object-cover">
-                <div class="font-bold">اليزوري ماركت — نقطة البيع</div>
+                <img src="{{ asset('images/logo.png') }}" alt="اليازوري ماركت" class="h-9 w-9 rounded-full shrink-0 object-cover">
+                <div class="font-bold">اليازوري ماركت — نقطة البيع</div>
             </div>
             <div class="flex items-center gap-2">
                 <button type="button" id="open-customer-display-btn"

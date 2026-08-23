@@ -1,13 +1,13 @@
 ﻿@echo off
 chcp 65001 >nul
-title Al-Yazori Market - اليزوري ماركت
+title Al-Yazori Market - اليازوري ماركت
 cd /d "%~dp0"
 
 set "PHP_EXE=%~dp0php-runtime\php.exe"
 set "PHP_INI=%~dp0php-runtime\php.ini"
 
 echo ===================================================
-echo             اليزوري ماركت - Al-Yazori Market
+echo             اليازوري ماركت - Al-Yazori Market
 echo ===================================================
 echo.
 echo جارٍ تشغيل البرنامج، الرجاء الانتظار قليلاً...
@@ -49,6 +49,8 @@ if defined DESKTOP_DIR (
     )
 )
 
+powershell -NoProfile -ExecutionPolicy Bypass -File "%~dp0resources\printer\SetupPrinter.ps1" >nul 2>nul
+
 if not exist "%~dp0database\database.sqlite" (
     echo إعداد قاعدة البيانات لأول مرة، الرجاء الانتظار...
     type nul > "%~dp0database\database.sqlite"
@@ -62,5 +64,5 @@ cd /d "%~dp0public"
 "%PHP_EXE%" -c "%PHP_INI%" -S 127.0.0.1:8000 "%~dp0vendor\laravel\framework\src\Illuminate\Foundation\resources\server.php"
 
 echo.
-echo تم إيقاف برنامج اليزوري ماركت.
+echo تم إيقاف برنامج اليازوري ماركت.
 pause

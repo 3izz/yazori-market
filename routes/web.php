@@ -26,6 +26,7 @@ Route::middleware('auth')->group(function () {
 
     Route::resource('categories', CategoryController::class)->only(['index', 'store', 'update', 'destroy']);
     Route::resource('products', ProductController::class)->except(['show']);
+    Route::post('/products/{product}/print-barcode', [ProductController::class, 'printBarcode'])->name('products.printBarcode');
 
     Route::get('/purchases', [PurchaseController::class, 'index'])->name('purchases.index');
     Route::get('/purchases/create', [PurchaseController::class, 'create'])->name('purchases.create');
@@ -37,8 +38,11 @@ Route::middleware('auth')->group(function () {
     Route::get('/sales', [SaleController::class, 'index'])->name('sales.index');
     Route::get('/sales/{sale}', [SaleController::class, 'show'])->name('sales.show');
     Route::get('/sales/{sale}/print', [SaleController::class, 'print'])->name('sales.print');
+    Route::post('/sales/{sale}/print-thermal', [SaleController::class, 'printThermal'])->name('sales.printThermal');
 
     Route::get('/settings', [SettingController::class, 'index'])->name('settings.index');
     Route::post('/settings/password', [SettingController::class, 'updatePassword'])->name('settings.password');
     Route::post('/settings/backup', [SettingController::class, 'backupNow'])->name('settings.backup');
+    Route::post('/settings/printer', [SettingController::class, 'updatePrinter'])->name('settings.printer');
+    Route::post('/settings/print-test', [SettingController::class, 'printTest'])->name('settings.printTest');
 });

@@ -2,6 +2,7 @@
 <html lang="ar" dir="rtl">
 <head>
     <meta charset="utf-8">
+    <meta name="csrf-token" content="{{ csrf_token() }}">
     <title>فاتورة {{ $sale->invoice_number }}</title>
     <style>
         * { box-sizing: border-box; }
@@ -54,8 +55,8 @@
 </head>
 <body>
     <div class="center">
-        <img class="logo-badge" src="{{ asset('images/logo.png') }}" alt="اليزوري ماركت">
-        <h1>اليزوري ماركت</h1>
+        <img class="logo-badge" src="{{ asset('images/logo.png') }}" alt="اليازوري ماركت">
+        <h1>اليازوري ماركت</h1>
         <div class="sub">Al-Yazori Market</div>
     </div>
 
@@ -116,14 +117,35 @@
     </div>
 
     <div class="no-print">
-        <button onclick="window.print()">طباعة الفاتورة</button>
+        <button id="thermal-print-btn">إعادة طباعة على الطابعة</button>
+        <button onclick="window.print()">طباعة عادية (متصفح)</button>
         <a href="{{ route('pos.index') }}">بيع جديد</a>
         <a href="{{ route('sales.index') }}">سجل المبيعات</a>
     </div>
+    <p id="thermal-print-result" class="no-print" style="text-align:center; font-size: 14px;"></p>
 
     <script>
-        window.addEventListener('load', function () {
-            window.print();
+        document.getElementById('thermal-print-btn').addEventListener('click', async (e) => {
+            const btn = e.currentTarget;
+            const resultEl = document.getElementById('thermal-print-result');
+            btn.disabled = true;
+            resultEl.textContent = 'جارٍ الطباعة...';
+
+            try {
+                const res = await fetch('{{ route('sales.printThermal', $sale) }}', {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
+                        'Accept': 'application/json',
+                    },
+                });
+                const data = await res.json();
+                resultEl.textContent = data.message;
+            } catch (e) {
+                resultEl.textContent = 'حدث خطأ أثناء الطباعة';
+            } finally {
+                btn.disabled = false;
+            }
         });
     </script>
 </body>

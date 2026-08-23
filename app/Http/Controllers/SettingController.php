@@ -3,6 +3,8 @@
 namespace App\Http\Controllers;
 
 use App\Services\BackupService;
+use App\Services\ThermalPrintService;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -12,7 +14,7 @@ use Illuminate\View\View;
 
 class SettingController extends Controller
 {
-    public function index(BackupService $backupService): View
+    public function index(BackupService $backupService, ThermalPrintService $printer): View
     {
         $backups = collect(File::exists($backupService->backupsDirectory()) ? File::files($backupService->backupsDirectory()) : [])
             ->sortByDesc(fn ($file) => $file->getMTime())
@@ -26,6 +28,7 @@ class SettingController extends Controller
         return view('settings.index', [
             'lastBackupAt' => $backupService->lastBackupAt(),
             'backups' => $backups,
+            'printerName' => $printer->printerName(),
         ]);
     }
 
@@ -55,5 +58,23 @@ class SettingController extends Controller
         $backupService->runNow();
 
         return back()->with('status', 'تم إنشاء نسخة احتياطية بنجاح');
+    }
+
+    public function updatePrinter(Request $request, ThermalPrintService $printer): RedirectResponse
+    {
+        $data = $request->validate([
+            'printer_name' => ['required', 'string', 'max:100'],
+        ], [], ['printer_name' => 'اسم الطابعة']);
+
+        $printer->setPrinterName($data['printer_name']);
+
+        return back()->with('status', 'تم حفظ اسم الطابعة');
+    }
+
+    public function printTest(ThermalPrintService $printer): JsonResponse
+    {
+        $result = $printer->printTest();
+
+        return response()->json($result, $result['success'] ? 200 : 422);
     }
 }
