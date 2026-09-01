@@ -36,9 +36,14 @@
                         <td class="px-4 py-3">{{ $sale->customer_name ?: '—' }}</td>
                         <td class="px-4 py-3 font-semibold">{{ number_format($sale->total, 2) }}</td>
                         <td class="px-4 py-3 text-slate-500">{{ $sale->created_at->format('Y-m-d H:i') }}</td>
-                        <td class="px-4 py-3 flex gap-3">
-                            <a href="{{ route('sales.show', $sale) }}" class="text-emerald-700 font-semibold">عرض</a>
-                            <a href="{{ route('sales.print', $sale) }}" class="text-slate-600 font-semibold" target="_blank">طباعة</a>
+                        <td class="px-4 py-3">
+                            <div class="flex items-center gap-3">
+                                <a href="{{ route('sales.show', $sale) }}" class="text-emerald-700 font-semibold">عرض</a>
+                                <button type="button" class="reprint-btn text-slate-600 font-semibold" data-sale-id="{{ $sale->id }}">
+                                    إعادة طباعة
+                                </button>
+                                <span class="reprint-result text-xs"></span>
+                            </div>
                         </td>
                     </tr>
                 @empty
@@ -53,4 +58,33 @@
     <div class="mt-4">
         {{ $sales->links() }}
     </div>
+
+    <script>
+        document.querySelectorAll('.reprint-btn').forEach((btn) => {
+            btn.addEventListener('click', async () => {
+                const resultEl = btn.nextElementSibling;
+                btn.disabled = true;
+                resultEl.textContent = 'جارٍ الطباعة...';
+                resultEl.className = 'reprint-result text-xs text-slate-500';
+
+                try {
+                    const res = await fetch(`/sales/${btn.dataset.saleId}/print-thermal`, {
+                        method: 'POST',
+                        headers: {
+                            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
+                            'Accept': 'application/json',
+                        },
+                    });
+                    const data = await res.json();
+                    resultEl.textContent = data.message;
+                    resultEl.className = 'reprint-result text-xs ' + (res.ok ? 'text-emerald-700' : 'text-red-600');
+                } catch (e) {
+                    resultEl.textContent = 'حدث خطأ';
+                    resultEl.className = 'reprint-result text-xs text-red-600';
+                } finally {
+                    btn.disabled = false;
+                }
+            });
+        });
+    </script>
 @endsection

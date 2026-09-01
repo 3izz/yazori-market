@@ -12,7 +12,8 @@ param(
     [Parameter(Mandatory=$true)][string]$HtmlPath,
     [Parameter(Mandatory=$true)][string]$PrinterName,
     [int]$WidthDots = 576,
-    [string]$LogPath = $null
+    [string]$LogPath = $null,
+    [switch]$OpenDrawer
 )
 
 function Write-Result([string]$text) {
@@ -191,8 +192,14 @@ try {
     $feed = @([byte]10, [byte]10, [byte]10, [byte]10)
     $cut = @($gs, [byte][char]'V', [byte]1)
 
+    # Standard ESC/POS cash-drawer kick (ESC p m t1 t2), sent through the same
+    # printer cable/RJ11 pass-through - only for actual sale receipts, never for
+    # barcode labels or the settings test print.
+    $drawerKick = @($esc, [byte][char]'p', [byte]0, [byte]25, [byte]250)
+
     $payload = New-Object System.Collections.Generic.List[byte]
     $payload.AddRange([byte[]]$init)
+    if ($OpenDrawer) { $payload.AddRange([byte[]]$drawerKick) }
     $payload.AddRange([byte[]]$rasterHeader)
     $payload.AddRange([byte[]]$imageData)
     $payload.AddRange([byte[]]$feed)

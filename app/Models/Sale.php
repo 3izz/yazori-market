@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Support\Carbon;
 
 class Sale extends Model
 {
@@ -17,6 +18,19 @@ class Sale extends Model
         'paid_amount',
         'user_id',
     ];
+
+    /**
+     * A supermarket's "today" runs 6am to 6am, not midnight to midnight, so a
+     * cashier closing out late at night doesn't get tomorrow's early sales
+     * mixed into the same till, and vice versa.
+     */
+    public static function currentBusinessDayStart(): Carbon
+    {
+        $now = now();
+        $todaySixAm = $now->copy()->startOfDay()->addHours(6);
+
+        return $now->gte($todaySixAm) ? $todaySixAm : $todaySixAm->subDay();
+    }
 
     public function items(): HasMany
     {

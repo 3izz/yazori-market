@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Setting;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -41,11 +42,40 @@ class AuthController extends Controller
 
     public function destroy(Request $request): RedirectResponse
     {
+        $wasPosOnly = ! Auth::check() && $request->session()->get('pos_unlocked');
+
         Auth::logout();
 
         $request->session()->invalidate();
         $request->session()->regenerateToken();
 
-        return redirect()->route('login');
+        return redirect()->route($wasPosOnly ? 'pos.unlock' : 'login');
+    }
+
+    public function showPosUnlock(): View|RedirectResponse
+    {
+        if (Auth::check() || session('pos_unlocked')) {
+            return redirect()->route('pos.index');
+        }
+
+        return view('auth.pos-unlock');
+    }
+
+    public function posUnlock(Request $request): RedirectResponse
+    {
+        $data = $request->validate([
+            'pin' => ['required', 'string'],
+        ], [], ['pin' => 'الرقم السري']);
+
+        $posPin = Setting::get('pos_pin', '1234');
+
+        if ($data['pin'] !== $posPin) {
+            return back()->withErrors(['pin' => 'الرقم السري غير صحيح']);
+        }
+
+        $request->session()->regenerate();
+        $request->session()->put('pos_unlocked', true);
+
+        return redirect()->route('pos.index');
     }
 }

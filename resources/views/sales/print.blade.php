@@ -106,7 +106,7 @@
                 <td colspan="3">الإجمالي</td>
                 <td>{{ number_format($sale->total, 2) }}</td>
             </tr>
-            @if ($sale->paid_amount > $sale->total)
+            @if ($sale->paid_amount > $sale->total && \App\Models\Setting::get('show_paid_change', '1') === '1')
                 <tr>
                     <td colspan="3">المدفوع</td>
                     <td>{{ number_format($sale->paid_amount, 2) }}</td>

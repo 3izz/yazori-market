@@ -39,6 +39,10 @@
                 <span>الباقي للزبون</span>
                 <span id="change-value">0.00</span>
             </div>
+            <label class="flex items-center gap-2 text-sm text-slate-600">
+                <input type="checkbox" id="print-invoice-checkbox" checked class="h-5 w-5">
+                طباعة الفاتورة
+            </label>
             <button id="checkout-btn" type="button"
                     class="touch-btn w-full rounded-xl bg-emerald-700 text-white font-extrabold text-xl py-4 mt-2 hover:bg-emerald-800 active:bg-emerald-900 disabled:opacity-40">
                 إتمام البيع وطباعة الفاتورة
@@ -58,10 +62,22 @@
         <input type="text" id="search-input" placeholder="أو ابحث باسم المنتج..." autocomplete="off"
                class="w-full rounded-xl border border-slate-300 px-4 py-3 text-lg">
 
-        <div id="search-results" class="flex-1 overflow-y-auto grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 content-start pb-4">
+        <div id="search-results" class="hidden flex-1 overflow-y-auto grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 content-start pb-4">
         </div>
 
         <p id="search-message" class="text-center text-slate-400 hidden"></p>
+
+        <div id="quick-panel" class="flex-1 overflow-y-auto space-y-3 pb-4">
+            <div>
+                <h3 class="text-xs font-bold text-slate-500 mb-1">أسعار سريعة</h3>
+                <div id="quick-prices-row" class="flex flex-wrap gap-2"></div>
+            </div>
+            <div>
+                <h3 class="text-xs font-bold text-slate-500 mb-1">الأكثر مبيعاً</h3>
+                <div id="best-sellers-row" class="flex flex-wrap gap-2"></div>
+            </div>
+            <div id="category-rows" class="space-y-3"></div>
+        </div>
 
         <button type="button" id="unknown-product-btn"
                 class="touch-btn w-full rounded-xl bg-amber-500 text-white font-bold py-4 text-lg hover:bg-amber-600">
@@ -228,6 +244,9 @@
         }
 
         renderCart();
+        // Tapping a quick-item button doesn't leave the barcode field focused,
+        // so scanning right after would otherwise silently go nowhere.
+        focusBarcode();
     }
 
     unknownProductBtn.addEventListener('click', () => {
@@ -355,6 +374,25 @@
         }
     }
 
+    function makeProductButton(product) {
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'touch-btn w-24 h-24 shrink-0 rounded-lg bg-white border border-slate-200 shadow-sm p-1.5 text-center hover:border-emerald-500 hover:shadow flex flex-col items-center justify-center gap-0.5';
+        btn.innerHTML = `
+            <span class="font-bold text-slate-800 text-xs leading-tight line-clamp-2">${product.name}</span>
+            <span class="text-emerald-700 font-extrabold text-sm">${money(product.price)}</span>
+        `;
+        btn.addEventListener('click', () => {
+            addProductToCart({
+                id: product.id,
+                name: product.name,
+                price: product.price,
+                quantity_available: product.quantity,
+            });
+        });
+        return btn;
+    }
+
     function renderSearchResults(products) {
         searchResults.innerHTML = '';
 
@@ -365,26 +403,64 @@
         }
 
         searchMessage.classList.add('hidden');
+        products.forEach((product) => searchResults.appendChild(makeProductButton(product)));
+    }
 
-        products.forEach((product) => {
+    const QUICK_PRICES = [
+        { price: 0.05, color: 'bg-pink-400' },
+        { price: 0.10, color: 'bg-amber-400' },
+        { price: 0.15, color: 'bg-sky-400' },
+        { price: 0.25, color: 'bg-emerald-400' },
+        { price: 0.50, color: 'bg-purple-400' },
+        { price: 1.00, color: 'bg-orange-400' },
+    ];
+
+    function renderQuickPrices() {
+        const row = document.getElementById('quick-prices-row');
+        QUICK_PRICES.forEach(({ price, color }) => {
             const btn = document.createElement('button');
             btn.type = 'button';
-            btn.className = 'touch-btn rounded-xl bg-white border border-slate-200 shadow-sm p-4 text-right hover:border-emerald-500 hover:shadow flex flex-col gap-1 min-h-[96px]';
-            btn.innerHTML = `
-                <span class="font-bold text-slate-800 leading-snug">${product.name}</span>
-                <span class="text-emerald-700 font-extrabold text-lg">${money(product.price)}</span>
-                <span class="text-xs text-slate-400">متوفر: ${product.quantity} ${product.unit || ''}</span>
-            `;
+            btn.className = `touch-btn w-16 h-16 shrink-0 rounded-lg ${color} text-white font-extrabold text-sm shadow-sm hover:brightness-110`;
+            btn.textContent = money(price);
             btn.addEventListener('click', () => {
-                addProductToCart({
-                    id: product.id,
-                    name: product.name,
-                    price: product.price,
-                    quantity_available: product.quantity,
-                });
+                const id = `candy-${price}`;
+                const existing = cart.get(id);
+                if (existing) {
+                    existing.quantity += 1;
+                } else {
+                    cart.set(id, { id, name: 'سكاكر', price, quantity: 1, isCustom: true });
+                }
+                renderCart();
+                focusBarcode();
             });
-            searchResults.appendChild(btn);
+            row.appendChild(btn);
         });
+    }
+
+    async function loadQuickItems() {
+        try {
+            const res = await fetch('{{ route('pos.quickItems') }}');
+            const data = await res.json();
+
+            const bestSellersRow = document.getElementById('best-sellers-row');
+            (data.bestSellers || []).forEach((product) => bestSellersRow.appendChild(makeProductButton(product)));
+
+            const categoryRows = document.getElementById('category-rows');
+            (data.categories || []).forEach((category) => {
+                const section = document.createElement('div');
+                const heading = document.createElement('h3');
+                heading.className = 'text-xs font-bold text-slate-500 mb-1';
+                heading.textContent = category.name;
+                const row = document.createElement('div');
+                row.className = 'flex flex-wrap gap-2';
+                category.products.forEach((product) => row.appendChild(makeProductButton(product)));
+                section.appendChild(heading);
+                section.appendChild(row);
+                categoryRows.appendChild(section);
+            });
+        } catch (e) {
+            // Quick-access grid is a convenience; scanning/search still works if it fails to load.
+        }
     }
 
     async function lookupBarcode(code) {
@@ -412,6 +488,8 @@
         }
     }
 
+    const quickPanel = document.getElementById('quick-panel');
+
     let searchTimer = null;
     searchInput.addEventListener('input', () => {
         clearTimeout(searchTimer);
@@ -419,9 +497,14 @@
 
         if (!term) {
             searchResults.innerHTML = '';
+            searchResults.classList.add('hidden');
+            quickPanel.classList.remove('hidden');
             searchMessage.classList.add('hidden');
             return;
         }
+
+        quickPanel.classList.add('hidden');
+        searchResults.classList.remove('hidden');
 
         searchTimer = setTimeout(async () => {
             const res = await fetch(`{{ route('pos.search') }}?q=${encodeURIComponent(term)}`);
@@ -482,9 +565,11 @@
 
             broadcastCompleted(parseFloat(totalValue.textContent) || 0);
 
-            checkoutBtn.textContent = 'جارٍ الطباعة...';
+            const shouldPrint = document.getElementById('print-invoice-checkbox').checked;
+            checkoutBtn.textContent = shouldPrint ? 'جارٍ الطباعة...' : 'جارٍ فتح الدرج...';
             try {
-                const printRes = await fetch(`/sales/${data.sale_id}/print-thermal`, {
+                const url = shouldPrint ? `/sales/${data.sale_id}/print-thermal` : `{{ route('pos.openDrawer') }}`;
+                const printRes = await fetch(url, {
                     method: 'POST',
                     headers: {
                         'X-CSRF-TOKEN': csrfToken,
@@ -493,7 +578,7 @@
                 });
                 const printData = await printRes.json();
                 if (printRes.ok) {
-                    showToast('تم البيع وطباعة الفاتورة بنجاح ✓', false);
+                    showToast(shouldPrint ? 'تم البيع وطباعة الفاتورة بنجاح ✓' : 'تم البيع بنجاح ✓', false);
                 } else {
                     showToast('تم حفظ البيع، لكن تعذرت الطباعة: ' + (printData.message || ''), true);
                 }
@@ -520,6 +605,8 @@
     });
 
     renderCart();
+    renderQuickPrices();
+    loadQuickItems();
     focusBarcode();
 })();
 </script>

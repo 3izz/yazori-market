@@ -26,6 +26,40 @@
         </div>
     </div>
 
+    <div class="bg-white rounded-xl shadow-sm p-5 mb-6">
+        <div class="flex items-center justify-between mb-3">
+            <h2 class="font-bold text-slate-700">نسبة الربح لهذا اليوم</h2>
+            <span class="text-xs text-slate-400">
+                من {{ $business_day_start->format('Y-m-d h:i A') }} — يبدأ يوم البيع الساعة 6 صباحاً
+            </span>
+        </div>
+
+        @if ($profit_revenue <= 0)
+            <p class="text-sm text-slate-400">لا يوجد مبيعات بعد اليوم.</p>
+        @else
+            <div class="flex items-end gap-4 mb-3">
+                <div class="text-3xl font-extrabold text-emerald-700">{{ number_format($profit_percent, 1) }}%</div>
+                <div class="text-sm text-slate-500 pb-1">نسبة الربح من سعر التكلفة</div>
+            </div>
+
+            <div class="flex h-3 rounded-full overflow-hidden bg-slate-100" role="img"
+                 aria-label="التكلفة {{ number_format($profit_cost, 2) }}، الربح {{ number_format($profit_amount, 2) }}">
+                @php
+                    $costShare = $profit_revenue > 0 ? min(max($profit_cost / $profit_revenue, 0), 1) * 100 : 0;
+                @endphp
+                <div class="bg-slate-400" style="width: {{ $costShare }}%"></div>
+                <div class="w-0.5 bg-white"></div>
+                <div class="bg-emerald-500 flex-1"></div>
+            </div>
+
+            <div class="flex items-center gap-5 mt-3 text-xs text-slate-500">
+                <span class="flex items-center gap-1.5"><span class="h-2.5 w-2.5 rounded-full bg-slate-400"></span> التكلفة: {{ number_format($profit_cost, 2) }}</span>
+                <span class="flex items-center gap-1.5"><span class="h-2.5 w-2.5 rounded-full bg-emerald-500"></span> الربح: {{ number_format($profit_amount, 2) }}</span>
+                <span>المبيعات: {{ number_format($profit_revenue, 2) }}</span>
+            </div>
+        @endif
+    </div>
+
     <div class="flex flex-wrap gap-3 mb-6">
         <a href="{{ route('pos.index') }}" class="rounded-xl bg-emerald-700 text-white font-bold px-6 py-4 text-lg shadow hover:bg-emerald-800">
             فتح نقطة البيع

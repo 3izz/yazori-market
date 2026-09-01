@@ -82,6 +82,37 @@
                 طباعة تجريبية
             </button>
             <p id="test-print-result" class="text-sm mt-2"></p>
+
+            <hr class="my-5">
+
+            <form method="POST" action="{{ route('settings.invoiceOptions') }}">
+                @csrf
+                <label class="flex items-center gap-2 text-sm font-semibold text-slate-700 mb-3">
+                    <input type="checkbox" name="show_paid_change" value="1" @checked($showPaidChange) class="h-5 w-5">
+                    إظهار "المدفوع" و"الباقي" على الفاتورة المطبوعة
+                </label>
+                <button type="submit" class="rounded-lg bg-emerald-700 text-white font-bold px-6 py-3 hover:bg-emerald-800">
+                    حفظ
+                </button>
+            </form>
+        </div>
+
+        <div class="bg-white rounded-xl shadow-sm p-5">
+            <h2 class="font-bold text-slate-700 mb-4">الرقم السري لنقطة البيع</h2>
+            <p class="text-xs text-slate-400 mb-4">
+                هاد الرقم يسمح لأي حد يستخدم نقطة البيع بس، بدون الدخول الكامل على النظام (المنتجات، التقارير، الإعدادات...).
+            </p>
+            <form method="POST" action="{{ route('settings.posPin') }}" class="space-y-3">
+                @csrf
+                <div>
+                    <label class="block text-sm font-semibold text-slate-700 mb-1">الرقم السري (أرقام فقط، 4 إلى 8 خانات)</label>
+                    <input type="text" name="pos_pin" value="{{ old('pos_pin', $posPin) }}" inputmode="numeric" required
+                           class="w-full rounded-lg border border-slate-300 px-4 py-3">
+                </div>
+                <button type="submit" class="rounded-lg bg-emerald-700 text-white font-bold px-6 py-3 hover:bg-emerald-800">
+                    حفظ الرقم السري
+                </button>
+            </form>
         </div>
     </div>
 

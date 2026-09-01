@@ -2,9 +2,11 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Category;
 use App\Models\Product;
 use App\Models\Sale;
 use App\Models\SaleItem;
+use App\Services\ThermalPrintService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -21,6 +23,45 @@ class PosController extends Controller
     public function customerDisplay(): View
     {
         return view('pos.customer');
+    }
+
+    public function quickItems(): JsonResponse
+    {
+        $bestSellerIds = SaleItem::query()
+            ->selectRaw('product_id, SUM(quantity) as total_qty')
+            ->whereNotNull('product_id')
+            ->groupBy('product_id')
+            ->orderByDesc('total_qty')
+            ->limit(10)
+            ->pluck('product_id');
+
+        $bestSellers = Product::query()
+            ->whereIn('id', $bestSellerIds)
+            ->get()
+            ->sortBy(fn (Product $p) => array_search($p->id, $bestSellerIds->all()))
+            ->values()
+            ->map(fn (Product $product) => $this->formatProduct($product));
+
+        $categories = Category::query()
+            ->with(['products' => fn ($q) => $q->orderBy('name')->limit(12)])
+            ->orderBy('name')
+            ->get()
+            ->filter(fn (Category $category) => $category->products->isNotEmpty())
+            ->map(fn (Category $category) => [
+                'name' => $category->name,
+                'products' => $category->products->map(fn (Product $product) => $this->formatProduct($product)),
+            ])
+            ->values();
+
+        return response()->json([
+            'bestSellers' => $bestSellers,
+            'categories' => $categories,
+        ]);
+    }
+
+    public function openDrawer(ThermalPrintService $printer): JsonResponse
+    {
+        return response()->json($printer->openDrawerOnly());
     }
 
     public function search(Request $request): JsonResponse

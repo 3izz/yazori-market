@@ -17,7 +17,24 @@ class ThermalPrintService
 
         $html = view('sales.print-raw', compact('sale'))->render();
 
-        return $this->printHtml($html);
+        return $this->printHtml($html, openDrawer: true);
+    }
+
+    public function openDrawerOnly(): array
+    {
+        $script = base_path('resources/printer/OpenDrawer.ps1');
+
+        $commandString = 'start "" /B powershell.exe '.implode(' ', array_map('escapeshellarg', [
+            '-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', $script, '-PrinterName', $this->printerName(),
+        ]));
+
+        $process = proc_open($commandString, [], $pipes);
+
+        if (is_resource($process)) {
+            proc_close($process);
+        }
+
+        return ['success' => true, 'message' => 'تم فتح الدرج'];
     }
 
     public function printBarcodeLabel(Product $product): array
@@ -58,7 +75,7 @@ class ThermalPrintService
      * out, and the manual test print below stays synchronous because that's a
      * deliberate, occasional setup check where waiting a few seconds is fine.
      */
-    private function printHtml(string $html, bool $wait = false): array
+    private function printHtml(string $html, bool $wait = false, bool $openDrawer = false): array
     {
         $directory = storage_path('app/private/receipts');
 
@@ -78,6 +95,10 @@ class ThermalPrintService
             '-HtmlPath', $htmlPath,
             '-PrinterName', $this->printerName(),
         ];
+
+        if ($openDrawer) {
+            $psArgs[] = '-OpenDrawer';
+        }
 
         if ($wait) {
             $command = array_merge(['powershell.exe'], $psArgs);

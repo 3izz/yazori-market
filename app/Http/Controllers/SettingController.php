@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Setting;
 use App\Services\BackupService;
 use App\Services\ThermalPrintService;
 use Illuminate\Http\JsonResponse;
@@ -29,6 +30,8 @@ class SettingController extends Controller
             'lastBackupAt' => $backupService->lastBackupAt(),
             'backups' => $backups,
             'printerName' => $printer->printerName(),
+            'posPin' => Setting::get('pos_pin', '1234'),
+            'showPaidChange' => Setting::get('show_paid_change', '1') === '1',
         ]);
     }
 
@@ -76,5 +79,25 @@ class SettingController extends Controller
         $result = $printer->printTest();
 
         return response()->json($result, $result['success'] ? 200 : 422);
+    }
+
+    public function updatePosPin(Request $request): RedirectResponse
+    {
+        $data = $request->validate([
+            'pos_pin' => ['required', 'string', 'min:4', 'max:8', 'regex:/^[0-9]+$/'],
+        ], [
+            'pos_pin.regex' => 'الرقم السري يجب أن يتكون من أرقام فقط',
+        ], ['pos_pin' => 'الرقم السري لنقطة البيع']);
+
+        Setting::set('pos_pin', $data['pos_pin']);
+
+        return back()->with('status', 'تم حفظ الرقم السري لنقطة البيع');
+    }
+
+    public function updateInvoiceOptions(Request $request): RedirectResponse
+    {
+        Setting::set('show_paid_change', $request->boolean('show_paid_change') ? '1' : '0');
+
+        return back()->with('status', 'تم حفظ إعدادات الفاتورة');
     }
 }

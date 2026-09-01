@@ -20,9 +20,17 @@
                         class="touch-btn rounded-lg bg-emerald-700 px-4 py-3 text-sm font-semibold hover:bg-emerald-600">
                     فتح شاشة الزبون
                 </button>
-                <a href="{{ route('dashboard') }}" class="touch-btn rounded-lg bg-emerald-800 px-4 py-3 text-sm font-semibold hover:bg-emerald-700">
-                    رجوع للوحة التحكم
-                </a>
+                @auth
+                    <a href="{{ route('dashboard') }}" class="touch-btn rounded-lg bg-emerald-800 px-4 py-3 text-sm font-semibold hover:bg-emerald-700">
+                        رجوع للوحة التحكم
+                    </a>
+                @endauth
+                <form method="POST" action="{{ route('logout') }}">
+                    @csrf
+                    <button type="submit" class="touch-btn rounded-lg bg-red-900/60 px-4 py-3 text-sm font-semibold hover:bg-red-900">
+                        خروج
+                    </button>
+                </form>
             </div>
         </header>
 

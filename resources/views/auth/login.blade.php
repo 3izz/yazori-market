@@ -44,6 +44,10 @@
                 </button>
             </form>
         </div>
+
+        <a href="{{ route('pos.unlock') }}" class="block text-center text-emerald-200 text-sm mt-4 hover:text-white">
+            دخول نقطة البيع فقط (رقم سري)
+        </a>
     </div>
 </body>
 </html>
