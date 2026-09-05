@@ -39,7 +39,7 @@
                     {{ $lastBackupAt ? \Illuminate\Support\Carbon::parse($lastBackupAt)->format('Y-m-d H:i') : 'لم تتم بعد' }}
                 </span>
             </p>
-            <p class="text-xs text-slate-400 mb-4">يتم أخذ نسخة احتياطية تلقائياً كل يومين عند استخدام البرنامج.</p>
+            <p class="text-xs text-slate-400 mb-4">يتم أخذ نسخة احتياطية تلقائياً كل 6 ساعات عند استخدام البرنامج، وتُحفظ داخل الجهاز دائماً.</p>
 
             <form method="POST" action="{{ route('settings.backup') }}" class="mb-5">
                 @csrf
@@ -47,6 +47,25 @@
                     إنشاء نسخة احتياطية الآن
                 </button>
             </form>
+
+            <hr class="my-5">
+
+            <h3 class="text-sm font-bold text-slate-600 mb-2">مكان إضافي للنسخة الاحتياطية (اختياري)</h3>
+            <p class="text-xs text-slate-400 mb-3">
+                مثلاً فلاشة أو قرص خارجي دائم التوصيل — إذا انعطب الجهاز نفسه، بتضل عندك نسخة بمكان تاني.
+                اكتب المسار كامل، مثلاً: <code class="bg-slate-100 px-1 rounded">D:\نسخ-احتياطية</code>
+            </p>
+            <form method="POST" action="{{ route('settings.backupPath') }}" class="space-y-3">
+                @csrf
+                <input type="text" name="backup_external_path" value="{{ old('backup_external_path', $backupExternalPath) }}"
+                       placeholder="مثال: D:\نسخ-احتياطية"
+                       class="w-full rounded-lg border border-slate-300 px-4 py-3" dir="ltr">
+                <button type="submit" class="rounded-lg bg-emerald-700 text-white font-bold px-6 py-3 hover:bg-emerald-800">
+                    حفظ المكان
+                </button>
+            </form>
+
+            <hr class="my-5">
 
             <h3 class="text-sm font-bold text-slate-600 mb-2">آخر النسخ المحفوظة</h3>
             @if ($backups->isEmpty())

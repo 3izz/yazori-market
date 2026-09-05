@@ -51,6 +51,7 @@ Route::middleware('auth')->group(function () {
     Route::get('/settings', [SettingController::class, 'index'])->name('settings.index');
     Route::post('/settings/password', [SettingController::class, 'updatePassword'])->name('settings.password');
     Route::post('/settings/backup', [SettingController::class, 'backupNow'])->name('settings.backup');
+    Route::post('/settings/backup-path', [SettingController::class, 'updateBackupPath'])->name('settings.backupPath');
     Route::post('/settings/printer', [SettingController::class, 'updatePrinter'])->name('settings.printer');
     Route::post('/settings/print-test', [SettingController::class, 'printTest'])->name('settings.printTest');
     Route::post('/settings/pos-pin', [SettingController::class, 'updatePosPin'])->name('settings.posPin');

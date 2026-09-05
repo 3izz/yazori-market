@@ -32,6 +32,7 @@ class SettingController extends Controller
             'printerName' => $printer->printerName(),
             'posPin' => Setting::get('pos_pin', '1234'),
             'showPaidChange' => Setting::get('show_paid_change', '1') === '1',
+            'backupExternalPath' => $backupService->externalPath(),
         ]);
     }
 
@@ -99,5 +100,22 @@ class SettingController extends Controller
         Setting::set('show_paid_change', $request->boolean('show_paid_change') ? '1' : '0');
 
         return back()->with('status', 'تم حفظ إعدادات الفاتورة');
+    }
+
+    public function updateBackupPath(Request $request, BackupService $backupService): RedirectResponse
+    {
+        $data = $request->validate([
+            'backup_external_path' => ['nullable', 'string', 'max:255'],
+        ], [], ['backup_external_path' => 'مسار النسخ الاحتياطي']);
+
+        $path = $data['backup_external_path'] ?? null;
+
+        if (! $backupService->setExternalPath($path)) {
+            return back()->withErrors([
+                'backup_external_path' => 'تعذر الكتابة على هذا المسار. تأكد إنو القرص أو الفلاشة موصولة والمسار صحيح.',
+            ]);
+        }
+
+        return back()->with('status', $path ? 'تم حفظ مكان النسخة الاحتياطية الإضافي' : 'تم إلغاء مكان النسخة الاحتياطية الإضافي');
     }
 }

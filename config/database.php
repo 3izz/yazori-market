@@ -38,9 +38,14 @@ return [
             'database' => env('DB_DATABASE', database_path('database.sqlite')),
             'prefix' => '',
             'foreign_key_constraints' => env('DB_FOREIGN_KEYS', true),
-            'busy_timeout' => null,
-            'journal_mode' => null,
-            'synchronous' => null,
+            // WAL + synchronous=FULL: SQLite fsyncs at every durability-critical
+            // point instead of trusting the OS write cache, so a sudden power
+            // cut can lose at most the transaction in flight, never corrupt the
+            // database file itself. busy_timeout absorbs the brief lock window
+            // WAL introduces between the app and the backup job reading the file.
+            'busy_timeout' => 5000,
+            'journal_mode' => 'WAL',
+            'synchronous' => 'FULL',
             'transaction_mode' => 'DEFERRED',
         ],
 
