@@ -39,13 +39,13 @@
                 <span>الباقي للزبون</span>
                 <span id="change-value">0.00</span>
             </div>
-            <label class="flex items-center gap-2 text-sm text-slate-600">
-                <input type="checkbox" id="print-invoice-checkbox" checked class="h-5 w-5">
-                طباعة الفاتورة
-            </label>
-            <button id="checkout-btn" type="button"
+            <button id="checkout-btn" type="button" data-print="1"
                     class="touch-btn w-full rounded-xl bg-emerald-700 text-white font-extrabold text-xl py-4 mt-2 hover:bg-emerald-800 active:bg-emerald-900 disabled:opacity-40">
                 إتمام البيع وطباعة الفاتورة
+            </button>
+            <button id="checkout-noprint-btn" type="button" data-print="0"
+                    class="touch-btn w-full rounded-xl bg-emerald-700 text-white font-extrabold text-xl py-4 hover:bg-emerald-800 active:bg-emerald-900 disabled:opacity-40">
+                إتمام البيع بدون طباعة الفاتورة
             </button>
             <button id="clear-btn" type="button"
                     class="touch-btn w-full rounded-xl bg-slate-200 text-slate-600 font-semibold py-3 hover:bg-slate-300">
@@ -129,6 +129,7 @@
     const paidInput = document.getElementById('paid-input');
     const changeValue = document.getElementById('change-value');
     const checkoutBtn = document.getElementById('checkout-btn');
+    const checkoutNoPrintBtn = document.getElementById('checkout-noprint-btn');
     const clearBtn = document.getElementById('clear-btn');
     const customerNameInput = document.getElementById('customer-name');
     const openCustomerDisplayBtn = document.getElementById('open-customer-display-btn');
@@ -366,6 +367,7 @@
         totalValue.textContent = money(total);
         updateChange(total);
         checkoutBtn.disabled = cart.size === 0;
+        checkoutNoPrintBtn.disabled = cart.size === 0;
 
         if (cart.size === 0) {
             broadcastIdle();
@@ -530,11 +532,19 @@
         }
     });
 
-    checkoutBtn.addEventListener('click', async () => {
+    const CHECKOUT_LABELS = {
+        [checkoutBtn.id]: 'إتمام البيع وطباعة الفاتورة',
+        [checkoutNoPrintBtn.id]: 'إتمام البيع بدون طباعة الفاتورة',
+    };
+
+    async function handleCheckout(clickedBtn) {
         if (cart.size === 0) return;
 
+        const shouldPrint = clickedBtn.dataset.print === '1';
+
         checkoutBtn.disabled = true;
-        checkoutBtn.textContent = 'جارٍ الحفظ...';
+        checkoutNoPrintBtn.disabled = true;
+        clickedBtn.textContent = 'جارٍ الحفظ...';
 
         try {
             const res = await fetch(`{{ route('pos.checkout') }}`, {
@@ -565,8 +575,7 @@
 
             broadcastCompleted(parseFloat(totalValue.textContent) || 0);
 
-            const shouldPrint = document.getElementById('print-invoice-checkbox').checked;
-            checkoutBtn.textContent = shouldPrint ? 'جارٍ الطباعة...' : 'جارٍ فتح الدرج...';
+            clickedBtn.textContent = shouldPrint ? 'جارٍ الطباعة...' : 'جارٍ فتح الدرج...';
             try {
                 const url = shouldPrint ? `/sales/${data.sale_id}/print-thermal` : `{{ route('pos.openDrawer') }}`;
                 const printRes = await fetch(url, {
@@ -591,10 +600,15 @@
         } catch (e) {
             alert('حدث خطأ أثناء إتمام عملية البيع');
         } finally {
-            checkoutBtn.disabled = false;
-            checkoutBtn.textContent = 'إتمام البيع وطباعة الفاتورة';
+            checkoutBtn.disabled = cart.size === 0;
+            checkoutNoPrintBtn.disabled = cart.size === 0;
+            checkoutBtn.textContent = CHECKOUT_LABELS[checkoutBtn.id];
+            checkoutNoPrintBtn.textContent = CHECKOUT_LABELS[checkoutNoPrintBtn.id];
         }
-    });
+    }
+
+    checkoutBtn.addEventListener('click', () => handleCheckout(checkoutBtn));
+    checkoutNoPrintBtn.addEventListener('click', () => handleCheckout(checkoutNoPrintBtn));
 
     // Keep the barcode field focused for scanner input, without blocking mouse/keyboard use elsewhere.
     document.addEventListener('click', (e) => {
