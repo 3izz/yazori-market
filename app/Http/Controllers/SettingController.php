@@ -34,6 +34,7 @@ class SettingController extends Controller
             'backups' => $backups,
             'printerName' => $printer->printerName(),
             'posPin' => Setting::get('pos_pin', '1234'),
+            'adminPin' => Setting::get('admin_pin', '0000'),
             'showPaidChange' => Setting::get('show_paid_change', '1') === '1',
             'backupExternalPath' => $backupService->externalPath(),
             'cashiers' => Cashier::query()->orderBy('name')->get(),
@@ -97,6 +98,19 @@ class SettingController extends Controller
         Setting::set('pos_pin', $data['pos_pin']);
 
         return back()->with('status', 'تم حفظ الرقم السري لنقطة البيع');
+    }
+
+    public function updateAdminPin(Request $request): RedirectResponse
+    {
+        $data = $request->validate([
+            'admin_pin' => ['required', 'string', 'min:4', 'max:8', 'regex:/^[0-9]+$/'],
+        ], [
+            'admin_pin.regex' => 'الرقم السري يجب أن يتكون من أرقام فقط',
+        ], ['admin_pin' => 'الرقم السري الإداري']);
+
+        Setting::set('admin_pin', $data['admin_pin']);
+
+        return back()->with('status', 'تم حفظ الرقم السري الإداري');
     }
 
     public function updateInvoiceOptions(Request $request): RedirectResponse

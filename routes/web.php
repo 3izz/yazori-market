@@ -36,35 +36,48 @@ Route::middleware('pos.access')->group(function () {
 
 // Full admin login required for everything else.
 Route::middleware('auth')->group(function () {
-    Route::get('/', [DashboardController::class, 'index'])->name('dashboard');
+    // The PIN challenge itself must stay reachable without already holding
+    // the admin_nav_unlocked flag - it's what grants that flag - so it sits
+    // outside the admin.nav.pin group below, not inside it.
+    Route::get('/admin/pin', [AuthController::class, 'showAdminPinChallenge'])->name('admin.pin.challenge');
+    Route::post('/admin/pin', [AuthController::class, 'verifyAdminPin'])->name('admin.pin.verify');
 
-    Route::resource('categories', CategoryController::class)->only(['index', 'store', 'update', 'destroy']);
-    Route::resource('products', ProductController::class)->except(['show']);
-    Route::post('/products/{product}/print-barcode', [ProductController::class, 'printBarcode'])->name('products.printBarcode');
+    // Every GET into these pages demands the separate admin PIN, even for an
+    // already-logged-in admin - this business specifically does not want an
+    // open admin session to be freely browsable. POST/PUT/DELETE actions
+    // inside a page you already unlocked are not re-challenged.
+    Route::middleware('admin.nav.pin')->group(function () {
+        Route::get('/', [DashboardController::class, 'index'])->name('dashboard');
 
-    Route::get('/purchases', [PurchaseController::class, 'index'])->name('purchases.index');
-    Route::get('/purchases/create', [PurchaseController::class, 'create'])->name('purchases.create');
-    Route::post('/purchases', [PurchaseController::class, 'store'])->name('purchases.store');
-    Route::get('/purchases/{purchase}', [PurchaseController::class, 'show'])->name('purchases.show');
+        Route::resource('categories', CategoryController::class)->only(['index', 'store', 'update', 'destroy']);
+        Route::resource('products', ProductController::class)->except(['show']);
+        Route::post('/products/{product}/print-barcode', [ProductController::class, 'printBarcode'])->name('products.printBarcode');
 
-    Route::get('/inventory', [InventoryController::class, 'index'])->name('inventory.index');
-    Route::post('/inventory/adjust', [StockAdjustmentController::class, 'store'])->name('inventory.adjust');
+        Route::get('/purchases', [PurchaseController::class, 'index'])->name('purchases.index');
+        Route::get('/purchases/create', [PurchaseController::class, 'create'])->name('purchases.create');
+        Route::post('/purchases', [PurchaseController::class, 'store'])->name('purchases.store');
+        Route::get('/purchases/{purchase}', [PurchaseController::class, 'show'])->name('purchases.show');
 
-    Route::get('/sales', [SaleController::class, 'index'])->name('sales.index');
-    Route::get('/sales/{sale}', [SaleController::class, 'show'])->name('sales.show');
-    Route::get('/sales/{sale}/print', [SaleController::class, 'print'])->name('sales.print');
+        Route::get('/inventory', [InventoryController::class, 'index'])->name('inventory.index');
+        Route::post('/inventory/adjust', [StockAdjustmentController::class, 'store'])->name('inventory.adjust');
 
-    Route::get('/reports/daily', [ReportController::class, 'daily'])->name('reports.daily');
+        Route::get('/sales', [SaleController::class, 'index'])->name('sales.index');
+        Route::get('/sales/{sale}', [SaleController::class, 'show'])->name('sales.show');
+        Route::get('/sales/{sale}/print', [SaleController::class, 'print'])->name('sales.print');
 
-    Route::get('/settings', [SettingController::class, 'index'])->name('settings.index');
-    Route::post('/settings/password', [SettingController::class, 'updatePassword'])->name('settings.password');
-    Route::post('/settings/backup', [SettingController::class, 'backupNow'])->name('settings.backup');
-    Route::post('/settings/backup-path', [SettingController::class, 'updateBackupPath'])->name('settings.backupPath');
-    Route::post('/settings/printer', [SettingController::class, 'updatePrinter'])->name('settings.printer');
-    Route::post('/settings/print-test', [SettingController::class, 'printTest'])->name('settings.printTest');
-    Route::post('/settings/pos-pin', [SettingController::class, 'updatePosPin'])->name('settings.posPin');
-    Route::post('/settings/invoice-options', [SettingController::class, 'updateInvoiceOptions'])->name('settings.invoiceOptions');
-    Route::post('/settings/cashiers', [SettingController::class, 'storeCashier'])->name('settings.cashiers.store');
-    Route::post('/settings/cashiers/{cashier}', [SettingController::class, 'updateCashier'])->name('settings.cashiers.update');
-    Route::delete('/settings/cashiers/{cashier}', [SettingController::class, 'destroyCashier'])->name('settings.cashiers.destroy');
+        Route::get('/reports/daily', [ReportController::class, 'daily'])->name('reports.daily');
+
+        Route::get('/settings', [SettingController::class, 'index'])->name('settings.index');
+        Route::post('/settings/password', [SettingController::class, 'updatePassword'])->name('settings.password');
+        Route::post('/settings/backup', [SettingController::class, 'backupNow'])->name('settings.backup');
+        Route::post('/settings/backup-path', [SettingController::class, 'updateBackupPath'])->name('settings.backupPath');
+        Route::post('/settings/printer', [SettingController::class, 'updatePrinter'])->name('settings.printer');
+        Route::post('/settings/print-test', [SettingController::class, 'printTest'])->name('settings.printTest');
+        Route::post('/settings/pos-pin', [SettingController::class, 'updatePosPin'])->name('settings.posPin');
+        Route::post('/settings/admin-pin', [SettingController::class, 'updateAdminPin'])->name('settings.adminPin');
+        Route::post('/settings/invoice-options', [SettingController::class, 'updateInvoiceOptions'])->name('settings.invoiceOptions');
+        Route::post('/settings/cashiers', [SettingController::class, 'storeCashier'])->name('settings.cashiers.store');
+        Route::post('/settings/cashiers/{cashier}', [SettingController::class, 'updateCashier'])->name('settings.cashiers.update');
+        Route::delete('/settings/cashiers/{cashier}', [SettingController::class, 'destroyCashier'])->name('settings.cashiers.destroy');
+    });
 });

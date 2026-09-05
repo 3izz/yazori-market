@@ -84,4 +84,26 @@ class AuthController extends Controller
 
         return redirect()->route('pos.index');
     }
+
+    public function showAdminPinChallenge(): View
+    {
+        return view('auth.admin-pin');
+    }
+
+    public function verifyAdminPin(Request $request): RedirectResponse
+    {
+        $data = $request->validate([
+            'pin' => ['required', 'string'],
+        ], [], ['pin' => 'الرقم السري']);
+
+        if ($data['pin'] !== Setting::get('admin_pin', '0000')) {
+            return back()->withErrors(['pin' => 'الرقم السري غير صحيح']);
+        }
+
+        $intended = $request->session()->pull('admin_nav_intended', route('dashboard'));
+
+        $request->session()->put('admin_nav_unlocked', true);
+
+        return redirect()->to($intended);
+    }
 }

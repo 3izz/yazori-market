@@ -187,6 +187,25 @@
                 </button>
             </form>
         </div>
+
+        <div class="bg-white rounded-xl shadow-sm p-5">
+            <h2 class="font-bold text-slate-700 mb-4">الرقم السري الإداري (حماية إضافية)</h2>
+            <p class="text-xs text-slate-400 mb-4">
+                هاد الرقم بيتطلب كل مرة تتنقل فيها بين صفحات الإدارة (المنتجات، التصنيفات، المشتريات، الجرد، سجل المبيعات، الإعدادات) —
+                حتى وانت مسجل دخول أصلاً بيوزر وكلمة السر. هيك ما حدا يقدر يتصفح النظام حتى لو لقى الجلسة مفتوحة، بدون ما يعرف هاد الرقم.
+            </p>
+            <form method="POST" action="{{ route('settings.adminPin') }}" class="space-y-3">
+                @csrf
+                <div>
+                    <label class="block text-sm font-semibold text-slate-700 mb-1">الرقم السري الإداري (أرقام فقط، 4 إلى 8 خانات)</label>
+                    <input type="text" name="admin_pin" value="{{ old('admin_pin', $adminPin) }}" inputmode="numeric" required
+                           class="w-full rounded-lg border border-slate-300 px-4 py-3" dir="ltr">
+                </div>
+                <button type="submit" class="rounded-lg bg-emerald-700 text-white font-bold px-6 py-3 hover:bg-emerald-800">
+                    حفظ الرقم السري الإداري
+                </button>
+            </form>
+        </div>
     </div>
 
     <script>

@@ -2,6 +2,7 @@
 
 use App\Http\Middleware\CheckBackupSchedule;
 use App\Http\Middleware\EnsurePosAccess;
+use App\Http\Middleware\RequireAdminNavPin;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
@@ -18,6 +19,7 @@ return Application::configure(basePath: dirname(__DIR__))
         ]);
         $middleware->alias([
             'pos.access' => EnsurePosAccess::class,
+            'admin.nav.pin' => RequireAdminNavPin::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
