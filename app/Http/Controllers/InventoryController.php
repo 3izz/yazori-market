@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Category;
 use App\Models\Product;
+use App\Models\StockAdjustment;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
 
@@ -30,6 +31,12 @@ class InventoryController extends Controller
 
         $categories = Category::query()->orderBy('name')->get();
 
-        return view('inventory.index', compact('products', 'categories', 'totals'));
+        $adjustments = StockAdjustment::query()
+            ->with('product')
+            ->orderByDesc('created_at')
+            ->limit(15)
+            ->get();
+
+        return view('inventory.index', compact('products', 'categories', 'totals', 'adjustments'));
     }
 }

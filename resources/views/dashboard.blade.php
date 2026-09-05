@@ -5,6 +5,22 @@
 @section('content')
     <h1 class="text-xl font-bold text-slate-800 mb-5">لوحة التحكم</h1>
 
+    @if ($low_stock->isNotEmpty())
+        <a href="{{ route('inventory.index', ['low_only' => 1]) }}"
+           class="block rounded-xl bg-red-600 text-white p-4 mb-5 shadow-sm hover:bg-red-700">
+            <div class="flex items-center gap-2 font-bold">
+                <span class="text-xl">⚠</span>
+                <span>تنبيه: {{ $low_stock->count() }} {{ $low_stock->count() == 1 ? 'منتج' : 'منتجات' }} قاربت على النفاد أو خلصت — اضغط لعرضها</span>
+            </div>
+        </a>
+    @endif
+
+    @if (! $backup_verified)
+        <div class="rounded-xl bg-red-100 border border-red-300 text-red-800 p-4 mb-5 text-sm font-semibold">
+            ⚠ آخر نسخة احتياطية غير موثوقة! راجع صفحة الإعدادات فوراً.
+        </div>
+    @endif
+
     <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
         <div class="bg-white rounded-xl p-4 shadow-sm">
             <div class="text-xs text-slate-500 mb-1">مبيعات اليوم</div>
@@ -70,6 +86,9 @@
         <a href="{{ route('purchases.create') }}" class="rounded-xl bg-white border border-slate-300 font-semibold px-6 py-4 text-slate-700 hover:bg-slate-50">
             تسجيل فاتورة شراء
         </a>
+        <a href="{{ route('reports.daily') }}" target="_blank" class="rounded-xl bg-white border border-slate-300 font-semibold px-6 py-4 text-slate-700 hover:bg-slate-50">
+            🖨️ طباعة تقرير اليوم
+        </a>
     </div>
 
     <div class="bg-white rounded-xl shadow-sm overflow-hidden">
@@ -89,7 +108,7 @@
                     @foreach ($low_stock as $product)
                         <tr class="border-t">
                             <td class="px-4 py-2">{{ $product->name }}</td>
-                            <td class="px-4 py-2 text-red-600 font-bold">{{ $product->quantity }}</td>
+                            <td class="px-4 py-2 text-red-600 font-bold">{{ $product->formattedQuantity() }}</td>
                             <td class="px-4 py-2">{{ $product->min_stock }}</td>
                         </tr>
                     @endforeach

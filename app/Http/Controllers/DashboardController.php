@@ -37,6 +37,7 @@ class DashboardController extends Controller
                 ->limit(10)
                 ->get(),
             'last_backup_at' => $backupService->lastBackupAt(),
+            'backup_verified' => $backupService->lastBackupVerified(),
             'business_day_start' => $businessDayStart,
             'profit_cost' => $totalCost,
             'profit_revenue' => $totalRevenue,

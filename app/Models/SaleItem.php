@@ -17,6 +17,13 @@ class SaleItem extends Model
         'subtotal',
     ];
 
+    protected function casts(): array
+    {
+        return [
+            'quantity' => 'decimal:3',
+        ];
+    }
+
     public function sale(): BelongsTo
     {
         return $this->belongsTo(Sale::class);
@@ -25,5 +32,12 @@ class SaleItem extends Model
     public function product(): BelongsTo
     {
         return $this->belongsTo(Product::class);
+    }
+
+    public function formattedQuantity(): string
+    {
+        $trimmed = rtrim(rtrim((string) $this->quantity, '0'), '.');
+
+        return $trimmed === '' ? '0' : $trimmed;
     }
 }

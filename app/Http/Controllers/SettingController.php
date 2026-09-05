@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Cashier;
 use App\Models\Setting;
 use App\Services\BackupService;
 use App\Services\ThermalPrintService;
@@ -28,11 +29,14 @@ class SettingController extends Controller
 
         return view('settings.index', [
             'lastBackupAt' => $backupService->lastBackupAt(),
+            'lastBackupVerified' => $backupService->lastBackupVerified(),
+            'lastBackupError' => $backupService->lastBackupError(),
             'backups' => $backups,
             'printerName' => $printer->printerName(),
             'posPin' => Setting::get('pos_pin', '1234'),
             'showPaidChange' => Setting::get('show_paid_change', '1') === '1',
             'backupExternalPath' => $backupService->externalPath(),
+            'cashiers' => Cashier::query()->orderBy('name')->get(),
         ]);
     }
 
@@ -117,5 +121,34 @@ class SettingController extends Controller
         }
 
         return back()->with('status', $path ? 'تم حفظ مكان النسخة الاحتياطية الإضافي' : 'تم إلغاء مكان النسخة الاحتياطية الإضافي');
+    }
+
+    public function storeCashier(Request $request): RedirectResponse
+    {
+        $data = $request->validate([
+            'name' => ['required', 'string', 'max:100'],
+            'pin' => ['required', 'string', 'min:4', 'max:8', 'regex:/^[0-9]+$/', 'unique:cashiers,pin'],
+        ], [
+            'pin.regex' => 'الرقم السري يجب أن يتكون من أرقام فقط',
+            'pin.unique' => 'هذا الرقم السري مستخدم لكاشير آخر',
+        ], ['name' => 'اسم الكاشير', 'pin' => 'الرقم السري']);
+
+        Cashier::create($data);
+
+        return back()->with('status', 'تمت إضافة الكاشير');
+    }
+
+    public function updateCashier(Request $request, Cashier $cashier): RedirectResponse
+    {
+        $cashier->update(['active' => $request->boolean('active')]);
+
+        return back()->with('status', 'تم تحديث حالة الكاشير');
+    }
+
+    public function destroyCashier(Cashier $cashier): RedirectResponse
+    {
+        $cashier->delete();
+
+        return back()->with('status', 'تم حذف الكاشير');
     }
 }

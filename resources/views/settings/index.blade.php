@@ -39,6 +39,17 @@
                     {{ $lastBackupAt ? \Illuminate\Support\Carbon::parse($lastBackupAt)->format('Y-m-d H:i') : 'لم تتم بعد' }}
                 </span>
             </p>
+            @if ($lastBackupAt && ! $lastBackupVerified)
+                <div class="rounded-lg bg-red-100 border border-red-300 text-red-800 text-sm font-semibold p-3 mb-3">
+                    ⚠ آخر نسخة احتياطية غير موثوقة ولا يمكن الاعتماد عليها.
+                    @if ($lastBackupError)
+                        <div class="font-normal mt-1 text-xs">{{ $lastBackupError }}</div>
+                    @endif
+                    اضغط "إنشاء نسخة احتياطية الآن" لإعادة المحاولة.
+                </div>
+            @elseif ($lastBackupAt)
+                <p class="text-xs text-emerald-700 font-semibold mb-3">✓ تم التأكد من سلامة آخر نسخة احتياطية</p>
+            @endif
             <p class="text-xs text-slate-400 mb-4">يتم أخذ نسخة احتياطية تلقائياً كل 6 ساعات عند استخدام البرنامج، وتُحفظ داخل الجهاز دائماً.</p>
 
             <form method="POST" action="{{ route('settings.backup') }}" class="mb-5">
@@ -130,6 +141,49 @@
                 </div>
                 <button type="submit" class="rounded-lg bg-emerald-700 text-white font-bold px-6 py-3 hover:bg-emerald-800">
                     حفظ الرقم السري
+                </button>
+            </form>
+
+            <hr class="my-5">
+
+            <h3 class="text-sm font-bold text-slate-600 mb-2">كاشيرات بأرقام سرية خاصة (اختياري)</h3>
+            <p class="text-xs text-slate-400 mb-3">
+                إذا بدك تعرف مين سجّل كل فاتورة، ضيف كاشير باسمه ورقمه السري الخاص، وهو بيستخدمه بدل الرقم السري العام فوق.
+            </p>
+
+            @if ($cashiers->isNotEmpty())
+                <ul class="text-sm divide-y mb-3">
+                    @foreach ($cashiers as $cashier)
+                        <li class="py-2 flex items-center justify-between gap-2">
+                            <span class="font-semibold text-slate-700">{{ $cashier->name }}</span>
+                            <div class="flex items-center gap-2">
+                                <form method="POST" action="{{ route('settings.cashiers.update', $cashier) }}">
+                                    @csrf
+                                    <input type="hidden" name="active" value="{{ $cashier->active ? '0' : '1' }}">
+                                    <button type="submit" class="text-xs font-semibold {{ $cashier->active ? 'text-emerald-700' : 'text-slate-400' }}">
+                                        {{ $cashier->active ? 'مفعّل' : 'معطّل' }}
+                                    </button>
+                                </form>
+                                <form method="POST" action="{{ route('settings.cashiers.destroy', $cashier) }}"
+                                      onsubmit="return confirm('حذف هذا الكاشير؟');">
+                                    @csrf
+                                    @method('DELETE')
+                                    <button type="submit" class="text-xs font-semibold text-red-600">حذف</button>
+                                </form>
+                            </div>
+                        </li>
+                    @endforeach
+                </ul>
+            @endif
+
+            <form method="POST" action="{{ route('settings.cashiers.store') }}" class="flex flex-wrap gap-2">
+                @csrf
+                <input type="text" name="name" placeholder="اسم الكاشير" required
+                       class="flex-1 min-w-[120px] rounded-lg border border-slate-300 px-3 py-2 text-sm">
+                <input type="text" name="pin" placeholder="رقم سري" inputmode="numeric" required
+                       class="w-28 rounded-lg border border-slate-300 px-3 py-2 text-sm" dir="ltr">
+                <button type="submit" class="rounded-lg bg-slate-800 text-white font-semibold px-4 py-2 text-sm hover:bg-slate-900">
+                    إضافة
                 </button>
             </form>
         </div>

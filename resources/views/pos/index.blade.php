@@ -86,6 +86,49 @@
     </section>
 </div>
 
+<div id="return-invoice-modal" class="hidden fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4">
+    <div class="bg-white rounded-2xl p-6 w-full max-w-sm space-y-4">
+        <h3 class="text-lg font-bold text-slate-800">استرجاع فاتورة</h3>
+
+        <div id="return-lookup-step" class="space-y-3">
+            <div>
+                <label class="block text-sm font-semibold text-slate-700 mb-1">رقم الفاتورة</label>
+                <input type="text" id="return-invoice-input" placeholder="مثال: INV-000123"
+                       class="w-full rounded-lg border border-slate-300 px-4 py-3 text-lg" dir="ltr">
+            </div>
+            <p id="return-lookup-message" class="text-sm text-red-600 hidden"></p>
+            <div class="flex gap-3 pt-2">
+                <button type="button" id="return-lookup-btn"
+                        class="flex-1 rounded-xl bg-amber-600 text-white font-bold py-3 hover:bg-amber-700">
+                    بحث
+                </button>
+                <button type="button" id="return-cancel-btn"
+                        class="flex-1 rounded-xl bg-slate-200 text-slate-700 font-bold py-3 hover:bg-slate-300">
+                    إلغاء
+                </button>
+            </div>
+        </div>
+
+        <div id="return-confirm-step" class="hidden space-y-3">
+            <div class="text-sm bg-slate-50 rounded-lg p-3">
+                <div class="font-bold mb-1">فاتورة <span id="return-sale-invoice"></span></div>
+                <div id="return-sale-items" class="text-slate-600 space-y-0.5"></div>
+                <div class="font-bold text-emerald-700 mt-2">الإجمالي: <span id="return-sale-total"></span></div>
+            </div>
+            <div class="flex gap-3 pt-2">
+                <button type="button" id="return-confirm-btn"
+                        class="flex-1 rounded-xl bg-red-600 text-white font-bold py-3 hover:bg-red-700">
+                    تأكيد الاسترجاع
+                </button>
+                <button type="button" id="return-back-btn"
+                        class="flex-1 rounded-xl bg-slate-200 text-slate-700 font-bold py-3 hover:bg-slate-300">
+                    رجوع
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
 <div id="unknown-product-modal" class="hidden fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4">
     <div class="bg-white rounded-2xl p-6 w-full max-w-sm space-y-4">
         <h3 class="text-lg font-bold text-slate-800">بيع صنف بدون باركود</h3>
@@ -115,7 +158,31 @@
 <script>
 (function () {
     const csrfToken = document.querySelector('meta[name="csrf-token"]').content;
+    const isAdminSession = @json(auth()->check());
     const cart = new Map();
+    let todayTotal = {{ (float) ($todayTotal ?? 0) }};
+
+    // Web Audio oscillator beeps - no audio files needed, works fully offline.
+    let audioCtx = null;
+    function beep(success) {
+        try {
+            audioCtx = audioCtx || new (window.AudioContext || window.webkitAudioContext)();
+            const tones = success ? [1600] : [300, 300];
+            let time = audioCtx.currentTime;
+            tones.forEach((freq, i) => {
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+                osc.frequency.value = freq;
+                gain.gain.value = 0.15;
+                osc.connect(gain).connect(audioCtx.destination);
+                const start = time + i * 0.16;
+                osc.start(start);
+                osc.stop(start + 0.12);
+            });
+        } catch (e) {
+            // Audio isn't essential to completing a sale; ignore if unsupported/blocked.
+        }
+    }
 
     const barcodeInput = document.getElementById('barcode-input');
     const searchInput = document.getElementById('search-input');
@@ -294,7 +361,10 @@
         const line = cart.get(id);
         if (!line) return;
 
-        const newQty = line.quantity + delta;
+        // Weighted products (e.g. produce sold by kg) move in 0.1 steps since
+        // a delta of a whole "1" doesn't make sense for fractional quantities.
+        const step = line.is_weighted ? 0.1 : 1;
+        const newQty = Math.round((line.quantity + (delta * step)) * 1000) / 1000;
 
         if (newQty <= 0) {
             cart.delete(id);
@@ -309,11 +379,16 @@
         const line = cart.get(id);
         if (!line) return;
 
-        let qty = parseInt(value, 10);
-        if (isNaN(qty) || qty < 1) qty = 1;
+        let qty = line.is_weighted ? parseFloat(value) : parseInt(value, 10);
+        const min = line.is_weighted ? 0.001 : 1;
+        if (isNaN(qty) || qty < min) qty = min;
 
-        line.quantity = qty;
+        line.quantity = Math.round(qty * 1000) / 1000;
         renderCart();
+    }
+
+    function formatQty(line) {
+        return line.is_weighted ? (Math.round(line.quantity * 1000) / 1000).toString() : line.quantity;
     }
 
     function removeLine(id) {
@@ -340,13 +415,13 @@
             row.className = 'p-3 flex items-center gap-3';
             row.innerHTML = `
                 <div class="flex-1 min-w-0">
-                    <div class="font-semibold text-slate-800 truncate">${line.name}</div>
-                    <div class="text-xs text-slate-500">${money(line.price)} × ${line.quantity} = ${money(line.price * line.quantity)}</div>
+                    <div class="font-semibold text-slate-800 truncate">${line.name}${line.is_weighted ? ' <span class="text-xs text-slate-400">(بالوزن)</span>' : ''}</div>
+                    <div class="text-xs text-slate-500">${money(line.price)} × ${formatQty(line)} = ${money(line.price * line.quantity)}</div>
                 </div>
                 <div class="flex items-center gap-1 shrink-0">
                     <button type="button" data-action="dec" class="touch-btn h-11 w-11 rounded-lg bg-slate-200 text-xl font-bold hover:bg-slate-300">−</button>
-                    <input type="number" min="1" value="${line.quantity}" data-action="set"
-                           class="h-11 w-14 rounded-lg border border-slate-300 text-center text-lg">
+                    <input type="number" min="${line.is_weighted ? '0.001' : '1'}" step="${line.is_weighted ? '0.001' : '1'}" value="${formatQty(line)}" data-action="set"
+                           class="h-11 w-16 rounded-lg border border-slate-300 text-center text-lg">
                     <button type="button" data-action="inc" class="touch-btn h-11 w-11 rounded-lg bg-slate-200 text-xl font-bold hover:bg-slate-300">+</button>
                     <button type="button" data-action="remove" class="touch-btn h-11 w-11 rounded-lg bg-red-100 text-red-600 text-lg font-bold hover:bg-red-200">×</button>
                 </div>
@@ -390,7 +465,9 @@
                 name: product.name,
                 price: product.price,
                 quantity_available: product.quantity,
+                is_weighted: product.is_weighted,
             });
+            beep(true);
         });
         return btn;
     }
@@ -478,11 +555,15 @@
                     name: data.product.name,
                     price: data.product.price,
                     quantity_available: data.product.quantity,
+                    is_weighted: data.product.is_weighted,
                 });
+                beep(true);
             } else {
+                beep(false);
                 alert(data.message || 'لا يوجد منتج بهذا الباركود');
             }
         } catch (e) {
+            beep(false);
             alert('حدث خطأ أثناء البحث عن المنتج');
         } finally {
             barcodeInput.value = '';
@@ -575,6 +656,10 @@
 
             broadcastCompleted(parseFloat(totalValue.textContent) || 0);
 
+            todayTotal += data.total || 0;
+            document.getElementById('header-today-total').textContent = money(todayTotal);
+            document.getElementById('header-last-invoice').textContent = data.invoice_number;
+
             clickedBtn.textContent = shouldPrint ? 'جارٍ الطباعة...' : 'جارٍ فتح الدرج...';
             try {
                 const url = shouldPrint ? `/sales/${data.sale_id}/print-thermal` : `{{ route('pos.openDrawer') }}`;
@@ -617,6 +702,154 @@
             focusBarcode();
         }
     });
+
+    // Return / refund flow
+    const returnBtn = document.getElementById('return-invoice-btn');
+    const returnModal = document.getElementById('return-invoice-modal');
+    const returnLookupStep = document.getElementById('return-lookup-step');
+    const returnConfirmStep = document.getElementById('return-confirm-step');
+    const returnInvoiceInput = document.getElementById('return-invoice-input');
+    const returnLookupMessage = document.getElementById('return-lookup-message');
+    const returnLookupBtn = document.getElementById('return-lookup-btn');
+    const returnCancelBtn = document.getElementById('return-cancel-btn');
+    const returnBackBtn = document.getElementById('return-back-btn');
+    const returnConfirmBtn = document.getElementById('return-confirm-btn');
+    let foundReturnSale = null;
+
+    function closeReturnModal() {
+        returnModal.classList.add('hidden');
+        returnModal.classList.remove('flex');
+        returnInvoiceInput.value = '';
+        returnLookupMessage.classList.add('hidden');
+        returnLookupStep.classList.remove('hidden');
+        returnConfirmStep.classList.add('hidden');
+        foundReturnSale = null;
+        focusBarcode();
+    }
+
+    returnBtn.addEventListener('click', () => {
+        returnModal.classList.remove('hidden');
+        returnModal.classList.add('flex');
+        returnInvoiceInput.focus();
+    });
+
+    returnCancelBtn.addEventListener('click', closeReturnModal);
+    returnBackBtn.addEventListener('click', () => {
+        returnConfirmStep.classList.add('hidden');
+        returnLookupStep.classList.remove('hidden');
+    });
+
+    async function doReturnLookup() {
+        const invoice = returnInvoiceInput.value.trim();
+        if (!invoice) return;
+
+        returnLookupMessage.classList.add('hidden');
+
+        try {
+            const res = await fetch(`{{ route('pos.returns.lookup') }}?invoice_number=${encodeURIComponent(invoice)}`);
+            const data = await res.json();
+
+            if (!res.ok || !data.found) {
+                returnLookupMessage.textContent = data.message || 'لم يتم العثور على الفاتورة';
+                returnLookupMessage.classList.remove('hidden');
+                return;
+            }
+
+            foundReturnSale = data.sale;
+            document.getElementById('return-sale-invoice').textContent = data.sale.invoice_number;
+            document.getElementById('return-sale-total').textContent = money(data.sale.total);
+            document.getElementById('return-sale-items').innerHTML = data.sale.items
+                .map((item) => `<div>${item.name} × ${item.quantity}</div>`)
+                .join('');
+
+            returnLookupStep.classList.add('hidden');
+            returnConfirmStep.classList.remove('hidden');
+        } catch (e) {
+            returnLookupMessage.textContent = 'حدث خطأ أثناء البحث';
+            returnLookupMessage.classList.remove('hidden');
+        }
+    }
+
+    returnLookupBtn.addEventListener('click', doReturnLookup);
+    returnInvoiceInput.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            doReturnLookup();
+        }
+    });
+
+    returnConfirmBtn.addEventListener('click', async () => {
+        if (!foundReturnSale) return;
+
+        returnConfirmBtn.disabled = true;
+        returnConfirmBtn.textContent = 'جارٍ الاسترجاع...';
+
+        try {
+            const res = await fetch(`{{ route('pos.returns.process') }}`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': csrfToken,
+                    'Accept': 'application/json',
+                },
+                body: JSON.stringify({ sale_id: foundReturnSale.id }),
+            });
+            const data = await res.json();
+
+            if (!res.ok) {
+                alert(data.message || 'تعذر استرجاع الفاتورة');
+                return;
+            }
+
+            todayTotal = Math.max(todayTotal - foundReturnSale.total, 0);
+            document.getElementById('header-today-total').textContent = money(todayTotal);
+
+            showToast('تم استرجاع الفاتورة بنجاح ✓', false);
+            closeReturnModal();
+        } catch (e) {
+            alert('حدث خطأ أثناء الاسترجاع');
+        } finally {
+            returnConfirmBtn.disabled = false;
+            returnConfirmBtn.textContent = 'تأكيد الاسترجاع';
+        }
+    });
+
+    // Idle auto-lock: only for PIN-only (cashier) sessions - a logged-in admin
+    // already passed the strongest gate and locking them mid-task would just
+    // be an annoyance with no added safety.
+    const lockPosBtn = document.getElementById('lock-pos-btn');
+
+    async function lockPos() {
+        try {
+            const res = await fetch(`{{ route('pos.lock') }}`, {
+                method: 'POST',
+                headers: {
+                    'X-CSRF-TOKEN': csrfToken,
+                    'Accept': 'application/json',
+                },
+            });
+            const data = await res.json();
+            window.location.href = data.redirect || '{{ route('pos.unlock') }}';
+        } catch (e) {
+            window.location.href = '{{ route('pos.unlock') }}';
+        }
+    }
+
+    if (lockPosBtn) {
+        lockPosBtn.addEventListener('click', lockPos);
+    }
+
+    if (!isAdminSession) {
+        const IDLE_LIMIT_MS = 5 * 60 * 1000;
+        let idleTimer = setTimeout(lockPos, IDLE_LIMIT_MS);
+
+        ['click', 'keydown', 'touchstart', 'input'].forEach((eventName) => {
+            document.addEventListener(eventName, () => {
+                clearTimeout(idleTimer);
+                idleTimer = setTimeout(lockPos, IDLE_LIMIT_MS);
+            });
+        });
+    }
 
     renderCart();
     renderQuickPrices();

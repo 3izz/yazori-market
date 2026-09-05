@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Cashier;
 use App\Models\Setting;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -67,14 +68,19 @@ class AuthController extends Controller
             'pin' => ['required', 'string'],
         ], [], ['pin' => 'الرقم السري']);
 
-        $posPin = Setting::get('pos_pin', '1234');
+        // Named cashier PINs are checked first so each sale can be attributed
+        // to a specific person; the single master PIN from Settings is kept
+        // as a fallback so a shop that never bothers adding cashiers keeps
+        // working exactly as before.
+        $cashier = Cashier::query()->where('pin', $data['pin'])->where('active', true)->first();
 
-        if ($data['pin'] !== $posPin) {
+        if (! $cashier && $data['pin'] !== Setting::get('pos_pin', '1234')) {
             return back()->withErrors(['pin' => 'الرقم السري غير صحيح']);
         }
 
         $request->session()->regenerate();
         $request->session()->put('pos_unlocked', true);
+        $request->session()->put('pos_cashier_name', $cashier?->name);
 
         return redirect()->route('pos.index');
     }

@@ -41,7 +41,7 @@
                         <td class="px-4 py-3 text-slate-500">{{ $product->barcode ?: '—' }}</td>
                         <td class="px-4 py-3">{{ $product->category?->name ?? '—' }}</td>
                         <td class="px-4 py-3">{{ number_format($product->sale_price, 2) }}</td>
-                        <td class="px-4 py-3 {{ $product->isLowStock() ? 'text-red-600 font-bold' : '' }}">{{ $product->quantity }} {{ $product->unit }}</td>
+                        <td class="px-4 py-3 {{ $product->isLowStock() ? 'text-red-600 font-bold' : '' }}">{{ $product->formattedQuantity() }} {{ $product->unit }}</td>
                         <td class="px-4 py-3">
                             <div class="flex gap-3">
                                 <a href="{{ route('products.edit', $product) }}" class="text-emerald-700 font-semibold">تعديل</a>

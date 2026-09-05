@@ -58,6 +58,9 @@
         <img class="logo-badge" src="{{ asset('images/logo.png') }}" alt="اليازوري ماركت">
         <h1>اليازوري ماركت</h1>
         <div class="sub">Al-Yazori Market</div>
+        @if ($sale->refunded_at)
+            <div class="sub" style="font-weight:bold;">— فاتورة مسترجعة —</div>
+        @endif
     </div>
 
     <hr>
@@ -85,7 +88,7 @@
             @foreach ($sale->items as $item)
                 <tr>
                     <td>{{ $item->product_name }}</td>
-                    <td>{{ $item->quantity }}</td>
+                    <td>{{ $item->formattedQuantity() }}</td>
                     <td>{{ number_format($item->price, 2) }}</td>
                     <td>{{ number_format($item->subtotal, 2) }}</td>
                 </tr>

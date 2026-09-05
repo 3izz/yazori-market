@@ -97,6 +97,8 @@ class BackupService
         // backup is never a half-written or stale copy.
         DB::statement('VACUUM INTO ?', [$destination]);
 
+        $this->verify($destination);
+
         if ($externalPath = $this->externalPath()) {
             try {
                 if (File::isDirectory($externalPath) || File::makeDirectory($externalPath, 0755, true)) {
@@ -122,6 +124,50 @@ class BackupService
     public function lastBackupAt(): ?string
     {
         return Setting::get(self::SETTING_KEY);
+    }
+
+    public function lastBackupVerified(): bool
+    {
+        return Setting::get('last_backup_verified', '1') === '1';
+    }
+
+    public function lastBackupError(): ?string
+    {
+        return Setting::get('last_backup_error') ?: null;
+    }
+
+    /**
+     * A backup file that VACUUM INTO produced but that can't actually be
+     * opened and read back is worse than no backup at all - it looks safe on
+     * the settings screen while silently protecting nothing. Open it fresh
+     * (a new PDO connection, not the app's own) and check both that SQLite
+     * itself considers it structurally sound and that the tables we depend on
+     * are really there before trusting it.
+     */
+    private function verify(string $path): void
+    {
+        try {
+            $pdo = new \PDO('sqlite:'.$path);
+            $integrity = $pdo->query('PRAGMA integrity_check')->fetchColumn();
+
+            if ($integrity !== 'ok') {
+                throw new \RuntimeException('integrity_check: '.$integrity);
+            }
+
+            foreach (['users', 'products', 'sales', 'sale_items', 'settings'] as $table) {
+                $exists = $pdo->query("SELECT name FROM sqlite_master WHERE type='table' AND name='{$table}'")->fetchColumn();
+
+                if (! $exists) {
+                    throw new \RuntimeException("جدول {$table} غير موجود بالنسخة الاحتياطية");
+                }
+            }
+
+            Setting::set('last_backup_verified', '1');
+            Setting::set('last_backup_error', '');
+        } catch (\Throwable $e) {
+            Setting::set('last_backup_verified', '0');
+            Setting::set('last_backup_error', $e->getMessage());
+        }
     }
 
     private function prune(string $directory): void

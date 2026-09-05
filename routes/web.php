@@ -7,8 +7,10 @@ use App\Http\Controllers\InventoryController;
 use App\Http\Controllers\PosController;
 use App\Http\Controllers\ProductController;
 use App\Http\Controllers\PurchaseController;
+use App\Http\Controllers\ReportController;
 use App\Http\Controllers\SaleController;
 use App\Http\Controllers\SettingController;
+use App\Http\Controllers\StockAdjustmentController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/login', [AuthController::class, 'create'])->name('login');
@@ -26,6 +28,9 @@ Route::middleware('pos.access')->group(function () {
     Route::get('/pos/quick-items', [PosController::class, 'quickItems'])->name('pos.quickItems');
     Route::post('/pos/checkout', [PosController::class, 'checkout'])->name('pos.checkout');
     Route::post('/pos/open-drawer', [PosController::class, 'openDrawer'])->name('pos.openDrawer');
+    Route::post('/pos/lock', [PosController::class, 'lock'])->name('pos.lock');
+    Route::get('/pos/returns/lookup', [PosController::class, 'lookupReturn'])->name('pos.returns.lookup');
+    Route::post('/pos/returns', [PosController::class, 'processReturn'])->name('pos.returns.process');
     Route::post('/sales/{sale}/print-thermal', [SaleController::class, 'printThermal'])->name('sales.printThermal');
 });
 
@@ -43,10 +48,13 @@ Route::middleware('auth')->group(function () {
     Route::get('/purchases/{purchase}', [PurchaseController::class, 'show'])->name('purchases.show');
 
     Route::get('/inventory', [InventoryController::class, 'index'])->name('inventory.index');
+    Route::post('/inventory/adjust', [StockAdjustmentController::class, 'store'])->name('inventory.adjust');
 
     Route::get('/sales', [SaleController::class, 'index'])->name('sales.index');
     Route::get('/sales/{sale}', [SaleController::class, 'show'])->name('sales.show');
     Route::get('/sales/{sale}/print', [SaleController::class, 'print'])->name('sales.print');
+
+    Route::get('/reports/daily', [ReportController::class, 'daily'])->name('reports.daily');
 
     Route::get('/settings', [SettingController::class, 'index'])->name('settings.index');
     Route::post('/settings/password', [SettingController::class, 'updatePassword'])->name('settings.password');
@@ -56,4 +64,7 @@ Route::middleware('auth')->group(function () {
     Route::post('/settings/print-test', [SettingController::class, 'printTest'])->name('settings.printTest');
     Route::post('/settings/pos-pin', [SettingController::class, 'updatePosPin'])->name('settings.posPin');
     Route::post('/settings/invoice-options', [SettingController::class, 'updateInvoiceOptions'])->name('settings.invoiceOptions');
+    Route::post('/settings/cashiers', [SettingController::class, 'storeCashier'])->name('settings.cashiers.store');
+    Route::post('/settings/cashiers/{cashier}', [SettingController::class, 'updateCashier'])->name('settings.cashiers.update');
+    Route::delete('/settings/cashiers/{cashier}', [SettingController::class, 'destroyCashier'])->name('settings.cashiers.destroy');
 });

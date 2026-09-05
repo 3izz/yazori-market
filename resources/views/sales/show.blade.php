@@ -4,17 +4,26 @@
 
 @section('content')
     <div class="flex items-center justify-between mb-5">
-        <h1 class="text-xl font-bold text-slate-800">فاتورة {{ $sale->invoice_number }}</h1>
+        <h1 class="text-xl font-bold text-slate-800">
+            فاتورة {{ $sale->invoice_number }}
+            @if ($sale->refunded_at)
+                <span class="text-sm text-red-600 font-bold">(مسترجعة بتاريخ {{ $sale->refunded_at->format('Y-m-d H:i') }})</span>
+            @endif
+        </h1>
         <div class="flex gap-3">
             <a href="{{ route('sales.print', $sale) }}" target="_blank" class="rounded-lg bg-slate-800 text-white font-semibold px-4 py-2">طباعة</a>
             <a href="{{ route('sales.index') }}" class="text-emerald-700 font-semibold self-center">رجوع للسجل</a>
         </div>
     </div>
 
-    <div class="bg-white rounded-xl shadow-sm p-5 mb-5 grid sm:grid-cols-3 gap-4 text-sm">
+    <div class="bg-white rounded-xl shadow-sm p-5 mb-5 grid sm:grid-cols-4 gap-4 text-sm">
         <div>
             <div class="text-slate-500">الزبون</div>
             <div class="font-semibold">{{ $sale->customer_name ?: '—' }}</div>
+        </div>
+        <div>
+            <div class="text-slate-500">الكاشير</div>
+            <div class="font-semibold">{{ $sale->cashier_name ?: '—' }}</div>
         </div>
         <div>
             <div class="text-slate-500">التاريخ</div>
@@ -41,7 +50,7 @@
                     <tr class="border-t">
                         <td class="px-4 py-3">{{ $item->product_name }}</td>
                         <td class="px-4 py-3">{{ number_format($item->price, 2) }}</td>
-                        <td class="px-4 py-3">{{ $item->quantity }}</td>
+                        <td class="px-4 py-3">{{ $item->formattedQuantity() }}</td>
                         <td class="px-4 py-3 font-semibold">{{ number_format($item->subtotal, 2) }}</td>
                     </tr>
                 @endforeach

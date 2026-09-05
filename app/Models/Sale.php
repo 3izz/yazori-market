@@ -17,7 +17,17 @@ class Sale extends Model
         'total',
         'paid_amount',
         'user_id',
+        'cashier_name',
+        'refunded_at',
+        'refund_reason',
     ];
+
+    protected function casts(): array
+    {
+        return [
+            'refunded_at' => 'datetime',
+        ];
+    }
 
     /**
      * A supermarket's "today" runs 6am to 6am, not midnight to midnight, so a

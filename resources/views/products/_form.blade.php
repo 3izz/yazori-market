@@ -49,7 +49,7 @@
 
     <div>
         <label class="block text-sm font-semibold text-slate-700 mb-1">الكمية الحالية بالمخزون</label>
-        <input type="number" min="0" name="quantity" value="{{ old('quantity', $product?->quantity ?? 0) }}" required
+        <input type="number" min="0" step="0.001" name="quantity" value="{{ old('quantity', $product?->quantity ?? 0) }}" required
                class="w-full rounded-lg border border-slate-300 px-4 py-3 text-lg focus:border-emerald-600 focus:ring-emerald-600">
     </div>
 
@@ -57,6 +57,13 @@
         <label class="block text-sm font-semibold text-slate-700 mb-1">الوحدة</label>
         <input type="text" name="unit" value="{{ old('unit', $product?->unit ?? 'قطعة') }}"
                class="w-full rounded-lg border border-slate-300 px-4 py-3 text-lg focus:border-emerald-600 focus:ring-emerald-600">
+    </div>
+
+    <div class="md:col-span-2">
+        <label class="flex items-center gap-2 text-sm font-semibold text-slate-700">
+            <input type="checkbox" name="is_weighted" value="1" @checked(old('is_weighted', $product?->is_weighted)) class="h-5 w-5">
+            يُباع بالوزن (يسمح بكسور مثل 0.250 بنقطة البيع)
+        </label>
     </div>
 
     <div>

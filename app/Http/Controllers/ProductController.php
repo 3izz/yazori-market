@@ -90,14 +90,15 @@ class ProductController extends Controller
             $barcodeRule .= ','.$product->id;
         }
 
-        return $request->validate([
+        $data = $request->validate([
             'name' => ['required', 'string', 'max:150'],
             'category_id' => ['nullable', 'exists:categories,id'],
             'barcode' => ['nullable', 'string', 'max:64', $barcodeRule],
             'unit' => ['nullable', 'string', 'max:30'],
+            'is_weighted' => ['nullable', 'boolean'],
             'purchase_price' => ['required', 'numeric', 'min:0'],
             'sale_price' => ['required', 'numeric', 'min:0'],
-            'quantity' => ['required', 'integer', 'min:0'],
+            'quantity' => ['required', 'numeric', 'min:0'],
             'min_stock' => ['nullable', 'integer', 'min:0'],
         ], [], [
             'name' => 'اسم المنتج',
@@ -109,5 +110,9 @@ class ProductController extends Controller
             'quantity' => 'الكمية',
             'min_stock' => 'حد التنبيه',
         ]);
+
+        $data['is_weighted'] = $request->boolean('is_weighted');
+
+        return $data;
     }
 }

@@ -17,7 +17,17 @@ class PosController extends Controller
 {
     public function index(): View
     {
-        return view('pos.index');
+        $businessDayStart = Sale::currentBusinessDayStart();
+
+        $todaySales = Sale::query()
+            ->where('created_at', '>=', $businessDayStart)
+            ->whereNull('refunded_at');
+
+        return view('pos.index', [
+            'todayTotal' => (float) (clone $todaySales)->sum('total'),
+            'lastInvoiceNumber' => (clone $todaySales)->orderByDesc('id')->value('invoice_number'),
+            'cashierName' => session('pos_cashier_name'),
+        ]);
     }
 
     public function customerDisplay(): View
@@ -103,7 +113,9 @@ class PosController extends Controller
             'items.*.product_id' => ['nullable', 'integer', 'exists:products,id'],
             'items.*.name' => ['required_without:items.*.product_id', 'nullable', 'string', 'max:150'],
             'items.*.price' => ['required_without:items.*.product_id', 'nullable', 'numeric', 'min:0'],
-            'items.*.quantity' => ['required', 'integer', 'min:1'],
+            // Weighted products (e.g. 0.250 kg) need fractional quantities; a
+            // whole-unit sale just happens to always submit a round number.
+            'items.*.quantity' => ['required', 'numeric', 'min:0.001'],
         ]);
 
         $sale = DB::transaction(function () use ($data) {
@@ -147,6 +159,7 @@ class PosController extends Controller
                 'total' => $total,
                 'paid_amount' => $data['paid_amount'] ?? $total,
                 'user_id' => Auth::id(),
+                'cashier_name' => session('pos_cashier_name'),
             ]);
 
             $sale->update(['invoice_number' => 'INV-'.str_pad((string) $sale->id, 6, '0', STR_PAD_LEFT)]);
@@ -171,7 +184,90 @@ class PosController extends Controller
         return response()->json([
             'redirect' => route('sales.print', $sale),
             'sale_id' => $sale->id,
+            'invoice_number' => $sale->invoice_number,
+            'total' => (float) $sale->total,
         ]);
+    }
+
+    public function lookupReturn(Request $request): JsonResponse
+    {
+        $invoice = $request->string('invoice_number')->trim()->value();
+
+        $sale = Sale::query()->with('items')->where('invoice_number', $invoice)->first();
+
+        if (! $sale) {
+            return response()->json(['found' => false, 'message' => 'لا توجد فاتورة بهذا الرقم'], 404);
+        }
+
+        if ($sale->refunded_at) {
+            return response()->json(['found' => false, 'message' => 'هذه الفاتورة مسترجعة مسبقاً بتاريخ '.$sale->refunded_at->format('Y-m-d H:i')], 422);
+        }
+
+        return response()->json([
+            'found' => true,
+            'sale' => [
+                'id' => $sale->id,
+                'invoice_number' => $sale->invoice_number,
+                'total' => (float) $sale->total,
+                'created_at' => $sale->created_at->format('Y-m-d H:i'),
+                'items' => $sale->items->map(fn (SaleItem $item) => [
+                    'name' => $item->product_name,
+                    'quantity' => (float) $item->quantity,
+                    'subtotal' => (float) $item->subtotal,
+                ]),
+            ],
+        ]);
+    }
+
+    public function processReturn(Request $request): JsonResponse
+    {
+        $data = $request->validate([
+            'sale_id' => ['required', 'exists:sales,id'],
+            'reason' => ['nullable', 'string', 'max:150'],
+        ]);
+
+        try {
+            $sale = DB::transaction(function () use ($data) {
+                $sale = Sale::query()->lockForUpdate()->with('items')->findOrFail($data['sale_id']);
+
+                if ($sale->refunded_at) {
+                    throw new \RuntimeException('هذه الفاتورة مسترجعة مسبقاً');
+                }
+
+                foreach ($sale->items as $item) {
+                    if ($item->product_id) {
+                        Product::query()->where('id', $item->product_id)->increment('quantity', $item->quantity);
+                    }
+                }
+
+                $sale->update([
+                    'refunded_at' => now(),
+                    'refund_reason' => $data['reason'] ?? null,
+                ]);
+
+                return $sale;
+            });
+        } catch (\RuntimeException $e) {
+            return response()->json(['success' => false, 'message' => $e->getMessage()], 422);
+        }
+
+        return response()->json(['success' => true, 'message' => 'تم استرجاع الفاتورة وإعادة الكمية للمخزون', 'sale_id' => $sale->id]);
+    }
+
+    /**
+     * Idle-timeout lock for PIN-only sessions: a cashier who walks away and
+     * forgets to log out shouldn't leave POS usable indefinitely. A logged-in
+     * admin is left alone here - they already passed the strongest gate, and
+     * force-locking them mid-task would just be an annoyance with no added
+     * safety.
+     */
+    public function lock(Request $request): JsonResponse
+    {
+        if (! Auth::check()) {
+            $request->session()->forget(['pos_unlocked', 'pos_cashier_name']);
+        }
+
+        return response()->json(['redirect' => route('pos.unlock')]);
     }
 
     private function formatProduct(Product $product): array
@@ -181,8 +277,9 @@ class PosController extends Controller
             'name' => $product->name,
             'barcode' => $product->barcode,
             'price' => (float) $product->sale_price,
-            'quantity' => $product->quantity,
+            'quantity' => (float) $product->quantity,
             'unit' => $product->unit,
+            'is_weighted' => $product->is_weighted,
         ];
     }
 }
