@@ -3,7 +3,16 @@
 @section('title', 'لوحة التحكم')
 
 @section('content')
-    <h1 class="text-xl font-bold text-slate-800 mb-5">لوحة التحكم</h1>
+    <div class="flex items-center gap-3 mb-5">
+        <h1 class="text-xl font-bold text-slate-800">لوحة التحكم</h1>
+        <button type="button" id="dashboard-reveal-btn"
+                class="h-9 w-9 shrink-0 rounded-full {{ $dashboardRevealed ? 'bg-slate-200 text-slate-500' : 'bg-emerald-700 text-white' }} text-lg hover:brightness-95"
+                title="إظهار الأرقام">
+            👁
+        </button>
+    </div>
+
+    <div id="dashboard-blur-1" class="{{ $dashboardRevealed ? '' : 'blur-md select-none pointer-events-none' }}">
 
     @if ($low_stock->isNotEmpty())
         <a href="{{ route('inventory.index', ['low_only' => 1]) }}"
@@ -133,6 +142,8 @@
         </div>
     </div>
 
+    </div>
+
     <div class="flex flex-wrap gap-3 mb-6">
         <a href="{{ route('pos.index') }}" class="rounded-xl bg-emerald-700 text-white font-bold px-6 py-4 text-lg shadow hover:bg-emerald-800">
             فتح نقطة البيع
@@ -148,6 +159,7 @@
         </a>
     </div>
 
+    <div id="dashboard-blur-2" class="{{ $dashboardRevealed ? '' : 'blur-md select-none pointer-events-none' }}">
     <div class="bg-white rounded-xl shadow-sm overflow-hidden">
         <div class="px-4 py-3 border-b font-bold text-slate-700">منتجات قاربت على النفاد</div>
         @if ($low_stock->isEmpty())
@@ -173,4 +185,110 @@
             </table>
         @endif
     </div>
+    </div>
+
+    <div id="dashboard-pin-modal" class="hidden fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl p-6 w-full max-w-sm space-y-4">
+            <h3 class="text-lg font-bold text-slate-800">إظهار أرقام لوحة التحكم</h3>
+            <div>
+                <label class="block text-sm font-semibold text-slate-700 mb-1">الرقم السري الإداري</label>
+                <input type="password" id="dashboard-pin-input" inputmode="numeric"
+                       class="w-full rounded-lg border border-slate-300 px-4 py-3 text-lg" dir="ltr">
+            </div>
+            <p id="dashboard-pin-error" class="text-sm text-red-600 hidden"></p>
+            <div class="flex gap-3 pt-2">
+                <button type="button" id="dashboard-pin-confirm-btn"
+                        class="flex-1 rounded-xl bg-emerald-700 text-white font-bold py-3 hover:bg-emerald-800">
+                    إظهار
+                </button>
+                <button type="button" id="dashboard-pin-cancel-btn"
+                        class="flex-1 rounded-xl bg-slate-200 text-slate-700 font-bold py-3 hover:bg-slate-300">
+                    إلغاء
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+    (function () {
+        const revealBtn = document.getElementById('dashboard-reveal-btn');
+        const blur1 = document.getElementById('dashboard-blur-1');
+        const blur2 = document.getElementById('dashboard-blur-2');
+        const modal = document.getElementById('dashboard-pin-modal');
+        const pinInput = document.getElementById('dashboard-pin-input');
+        const errorEl = document.getElementById('dashboard-pin-error');
+        const confirmBtn = document.getElementById('dashboard-pin-confirm-btn');
+        const cancelBtn = document.getElementById('dashboard-pin-cancel-btn');
+
+        function closeModal() {
+            modal.classList.add('hidden');
+            modal.classList.remove('flex');
+            errorEl.classList.add('hidden');
+            pinInput.value = '';
+        }
+
+        function reveal() {
+            [blur1, blur2].forEach((el) => el.classList.remove('blur-md', 'select-none', 'pointer-events-none'));
+            revealBtn.classList.remove('bg-emerald-700', 'text-white');
+            revealBtn.classList.add('bg-slate-200', 'text-slate-500');
+        }
+
+        revealBtn.addEventListener('click', () => {
+            if (! blur1.classList.contains('blur-md')) {
+                return;
+            }
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+            pinInput.focus();
+        });
+
+        cancelBtn.addEventListener('click', closeModal);
+
+        confirmBtn.addEventListener('click', async () => {
+            const pin = pinInput.value.trim();
+
+            if (!pin) {
+                errorEl.textContent = 'الرجاء إدخال الرقم السري';
+                errorEl.classList.remove('hidden');
+                return;
+            }
+
+            confirmBtn.disabled = true;
+
+            try {
+                const res = await fetch('{{ route('dashboard.reveal') }}', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
+                        'Accept': 'application/json',
+                    },
+                    body: JSON.stringify({ pin }),
+                });
+                const data = await res.json();
+
+                if (!res.ok) {
+                    errorEl.textContent = data.message || 'الرقم السري غير صحيح';
+                    errorEl.classList.remove('hidden');
+                    return;
+                }
+
+                reveal();
+                closeModal();
+            } catch (e) {
+                errorEl.textContent = 'حدث خطأ، حاول مرة أخرى';
+                errorEl.classList.remove('hidden');
+            } finally {
+                confirmBtn.disabled = false;
+            }
+        });
+
+        pinInput.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                confirmBtn.click();
+            }
+        });
+    })();
+    </script>
 @endsection

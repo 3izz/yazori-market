@@ -223,12 +223,23 @@ class PosController extends Controller
         ]);
     }
 
+    /**
+     * Returns and expenses all require the admin PIN as an explicit
+     * authorization step - a cashier alone shouldn't be able to move money
+     * out of the drawer (real or claimed) without a supervisor confirming
+     * it. Checked server-side so it can never be bypassed from the browser.
+     */
     public function processReturn(Request $request): JsonResponse
     {
         $data = $request->validate([
             'sale_id' => ['required', 'exists:sales,id'],
             'reason' => ['nullable', 'string', 'max:150'],
-        ]);
+            'admin_pin' => ['required', 'string'],
+        ], [], ['admin_pin' => 'الرقم السري']);
+
+        if ($data['admin_pin'] !== Setting::get('admin_pin', '0000')) {
+            return response()->json(['success' => false, 'message' => 'الرقم السري غير صحيح'], 422);
+        }
 
         try {
             $sale = DB::transaction(function () use ($data) {
@@ -263,7 +274,12 @@ class PosController extends Controller
         $data = $request->validate([
             'amount' => ['required', 'numeric', 'min:0.01'],
             'reason' => ['required', 'string', 'max:150'],
-        ], [], ['amount' => 'المبلغ', 'reason' => 'السبب']);
+            'admin_pin' => ['required', 'string'],
+        ], [], ['amount' => 'المبلغ', 'reason' => 'السبب', 'admin_pin' => 'الرقم السري']);
+
+        if ($data['admin_pin'] !== Setting::get('admin_pin', '0000')) {
+            return response()->json(['success' => false, 'message' => 'الرقم السري غير صحيح'], 422);
+        }
 
         CashMovement::create([
             'type' => 'expense',
@@ -276,14 +292,6 @@ class PosController extends Controller
         return response()->json(['success' => true, 'message' => 'تم تسجيل المصروف']);
     }
 
-    /**
-     * A cash return not tied to a specific invoice is an easy way for a
-     * dishonest cashier to pocket money by claiming a "return" that never
-     * happened, so - unlike storeExpense() above - this one requires the
-     * admin PIN (the same one that gates admin-page navigation) to be typed
-     * again as an explicit authorization step, checked server-side so it can
-     * never be bypassed from the browser.
-     */
     public function storeCashReturn(Request $request): JsonResponse
     {
         $data = $request->validate([

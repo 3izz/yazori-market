@@ -7,7 +7,10 @@ use App\Models\CashReset;
 use App\Models\Product;
 use App\Models\Sale;
 use App\Models\SaleItem;
+use App\Models\Setting;
 use App\Services\BackupService;
+use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 use Illuminate\View\View;
 
 class DashboardController extends Controller
@@ -87,8 +90,28 @@ class DashboardController extends Controller
             'expected_cash' => $openingFloat + $periodSalesTotal - $todayExpenses - $todayValueReturns,
             'last_reset' => $lastReset,
             'today_cash_movements' => $todayCashMovements,
+            'dashboardRevealed' => (bool) session('dashboard_revealed', false),
         ];
 
         return view('dashboard', $stats);
+    }
+
+    /**
+     * The dashboard's figures render blurred by default (see index()) since
+     * it's reachable with no PIN redirect at all; this is the eye-icon
+     * action that unblurs them for the rest of the session after confirming
+     * the admin PIN, without navigating away from the page.
+     */
+    public function reveal(Request $request): JsonResponse
+    {
+        $data = $request->validate(['pin' => ['required', 'string']], [], ['pin' => 'الرقم السري']);
+
+        if ($data['pin'] !== Setting::get('admin_pin', '0000')) {
+            return response()->json(['success' => false, 'message' => 'الرقم السري غير صحيح'], 422);
+        }
+
+        $request->session()->put('dashboard_revealed', true);
+
+        return response()->json(['success' => true]);
     }
 }

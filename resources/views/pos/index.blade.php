@@ -119,6 +119,11 @@
                 <div id="return-sale-items" class="text-slate-600 space-y-0.5"></div>
                 <div class="font-bold text-emerald-700 mt-2">الإجمالي: <span id="return-sale-total"></span></div>
             </div>
+            <div>
+                <label class="block text-sm font-semibold text-slate-700 mb-1">الرقم السري الإداري (للتأكيد)</label>
+                <input type="password" id="return-pin-input" inputmode="numeric"
+                       class="w-full rounded-lg border border-slate-300 px-4 py-3 text-lg" dir="ltr">
+            </div>
             <div class="flex gap-3 pt-2">
                 <button type="button" id="return-confirm-btn"
                         class="flex-1 rounded-xl bg-red-600 text-white font-bold py-3 hover:bg-red-700">
@@ -145,6 +150,11 @@
             <label class="block text-sm font-semibold text-slate-700 mb-1">السبب</label>
             <input type="text" id="expense-reason-input" placeholder="مثال: شراء أكياس"
                    class="w-full rounded-lg border border-slate-300 px-4 py-3 text-lg">
+        </div>
+        <div>
+            <label class="block text-sm font-semibold text-slate-700 mb-1">الرقم السري الإداري (للتأكيد)</label>
+            <input type="password" id="expense-pin-input" inputmode="numeric"
+                   class="w-full rounded-lg border border-slate-300 px-4 py-3 text-lg" dir="ltr">
         </div>
         <p id="expense-error" class="text-sm text-red-600 hidden"></p>
         <div class="flex gap-3 pt-2">
@@ -329,6 +339,7 @@
     const expenseModal = document.getElementById('expense-modal');
     const expenseAmountInput = document.getElementById('expense-amount-input');
     const expenseReasonInput = document.getElementById('expense-reason-input');
+    const expensePinInput = document.getElementById('expense-pin-input');
     const expenseError = document.getElementById('expense-error');
     const expenseConfirmBtn = document.getElementById('expense-confirm-btn');
     const expenseCancelBtn = document.getElementById('expense-cancel-btn');
@@ -913,6 +924,7 @@
     expenseBtn.addEventListener('click', () => {
         expenseAmountInput.value = '';
         expenseReasonInput.value = '';
+        expensePinInput.value = '';
         expenseError.classList.add('hidden');
         expenseModal.classList.remove('hidden');
         expenseModal.classList.add('flex');
@@ -924,6 +936,7 @@
     expenseConfirmBtn.addEventListener('click', async () => {
         const amount = parseFloat(expenseAmountInput.value);
         const reason = expenseReasonInput.value.trim();
+        const adminPin = expensePinInput.value.trim();
 
         if (isNaN(amount) || amount <= 0) {
             expenseError.textContent = 'الرجاء إدخال مبلغ صحيح';
@@ -939,6 +952,13 @@
             return;
         }
 
+        if (!adminPin) {
+            expenseError.textContent = 'الرجاء إدخال الرقم السري';
+            expenseError.classList.remove('hidden');
+            expensePinInput.focus();
+            return;
+        }
+
         expenseConfirmBtn.disabled = true;
 
         try {
@@ -949,13 +969,14 @@
                     'X-CSRF-TOKEN': csrfToken,
                     'Accept': 'application/json',
                 },
-                body: JSON.stringify({ amount, reason }),
+                body: JSON.stringify({ amount, reason, admin_pin: adminPin }),
             });
             const data = await res.json();
 
             if (!res.ok) {
                 expenseError.textContent = data.message || 'تعذر تسجيل المصروف';
                 expenseError.classList.remove('hidden');
+                expensePinInput.focus();
                 return;
             }
 
@@ -1165,12 +1186,14 @@
     const returnCancelBtn = document.getElementById('return-cancel-btn');
     const returnBackBtn = document.getElementById('return-back-btn');
     const returnConfirmBtn = document.getElementById('return-confirm-btn');
+    const returnPinInput = document.getElementById('return-pin-input');
     let foundReturnSale = null;
 
     function closeReturnModal() {
         returnModal.classList.add('hidden');
         returnModal.classList.remove('flex');
         returnInvoiceInput.value = '';
+        returnPinInput.value = '';
         returnLookupMessage.classList.add('hidden');
         returnLookupStep.classList.remove('hidden');
         returnConfirmStep.classList.add('hidden');
@@ -1179,6 +1202,7 @@
     }
 
     returnBtn.addEventListener('click', () => {
+        returnPinInput.value = '';
         returnModal.classList.remove('hidden');
         returnModal.classList.add('flex');
         returnInvoiceInput.focus();
@@ -1232,6 +1256,14 @@
     returnConfirmBtn.addEventListener('click', async () => {
         if (!foundReturnSale) return;
 
+        const adminPin = returnPinInput.value.trim();
+
+        if (!adminPin) {
+            alert('الرجاء إدخال الرقم السري');
+            returnPinInput.focus();
+            return;
+        }
+
         returnConfirmBtn.disabled = true;
         returnConfirmBtn.textContent = 'جارٍ الاسترجاع...';
 
@@ -1243,12 +1275,13 @@
                     'X-CSRF-TOKEN': csrfToken,
                     'Accept': 'application/json',
                 },
-                body: JSON.stringify({ sale_id: foundReturnSale.id }),
+                body: JSON.stringify({ sale_id: foundReturnSale.id, admin_pin: adminPin }),
             });
             const data = await res.json();
 
             if (!res.ok) {
                 alert(data.message || 'تعذر استرجاع الفاتورة');
+                returnPinInput.focus();
                 return;
             }
 

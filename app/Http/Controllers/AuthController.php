@@ -101,8 +101,13 @@ class AuthController extends Controller
         }
 
         $intended = $request->session()->pull('admin_nav_intended', route('dashboard'));
+        $section = $request->session()->pull('admin_nav_pending_section');
 
-        $request->session()->put('admin_nav_unlocked', true);
+        if ($section) {
+            $unlocked = $request->session()->get('admin_nav_unlocked_sections', []);
+            $unlocked[] = $section;
+            $request->session()->put('admin_nav_unlocked_sections', array_values(array_unique($unlocked)));
+        }
 
         return redirect()->to($intended);
     }

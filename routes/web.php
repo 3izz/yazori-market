@@ -40,18 +40,24 @@ Route::middleware('pos.access')->group(function () {
 // Full admin login required for everything else.
 Route::middleware('auth')->group(function () {
     // The PIN challenge itself must stay reachable without already holding
-    // the admin_nav_unlocked flag - it's what grants that flag - so it sits
-    // outside the admin.nav.pin group below, not inside it.
+    // the admin_nav_unlocked_sections flag - it's what grants that flag - so
+    // it sits outside the admin.nav.pin group below, not inside it.
     Route::get('/admin/pin', [AuthController::class, 'showAdminPinChallenge'])->name('admin.pin.challenge');
     Route::post('/admin/pin', [AuthController::class, 'verifyAdminPin'])->name('admin.pin.verify');
 
-    // Every GET into these pages demands the separate admin PIN, even for an
-    // already-logged-in admin - this business specifically does not want an
-    // open admin session to be freely browsable. POST/PUT/DELETE actions
-    // inside a page you already unlocked are not re-challenged.
-    Route::middleware('admin.nav.pin')->group(function () {
-        Route::get('/', [DashboardController::class, 'index'])->name('dashboard');
+    // The dashboard deliberately stays outside admin.nav.pin - it's reachable
+    // instantly (e.g. from POS's "رجوع للوحة التحكم" link) with no PIN
+    // redirect, but its figures render blurred until unlocked via the
+    // separate reveal endpoint below.
+    Route::get('/', [DashboardController::class, 'index'])->name('dashboard');
+    Route::post('/dashboard/reveal', [DashboardController::class, 'reveal'])->name('dashboard.reveal');
 
+    // Every GET into these sections demands the admin PIN once per section
+    // per session - the first visit to a section redirects through the PIN
+    // challenge, and it stays unlocked for the rest of the session from
+    // then on. POST/PUT/DELETE actions inside an already-unlocked section
+    // are not re-challenged.
+    Route::middleware('admin.nav.pin')->group(function () {
         Route::resource('categories', CategoryController::class)->only(['index', 'store', 'update', 'destroy']);
         Route::resource('products', ProductController::class)->except(['show']);
         Route::post('/products/{product}/print-barcode', [ProductController::class, 'printBarcode'])->name('products.printBarcode');
