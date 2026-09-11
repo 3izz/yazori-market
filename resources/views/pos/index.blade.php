@@ -73,6 +73,10 @@
                 <div id="quick-prices-row" class="flex flex-wrap gap-2"></div>
             </div>
             <div>
+                <h3 class="text-xs font-bold text-slate-500 mb-1">دخان</h3>
+                <div id="cigarette-row" class="flex flex-wrap gap-2"></div>
+            </div>
+            <div>
                 <h3 class="text-xs font-bold text-slate-500 mb-1">الأكثر مبيعاً</h3>
                 <div id="best-sellers-row" class="flex flex-wrap gap-2"></div>
             </div>
@@ -125,6 +129,27 @@
                     رجوع
                 </button>
             </div>
+        </div>
+    </div>
+</div>
+
+<div id="cigarette-price-modal" class="hidden fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4">
+    <div class="bg-white rounded-2xl p-6 w-full max-w-sm space-y-4">
+        <h3 class="text-lg font-bold text-slate-800">دخان — سعر آخر</h3>
+        <div>
+            <label class="block text-sm font-semibold text-slate-700 mb-1">السعر</label>
+            <input type="number" id="cigarette-price-input" min="0" step="0.01" inputmode="decimal"
+                   class="w-full rounded-lg border border-slate-300 px-4 py-3 text-lg">
+        </div>
+        <div class="flex gap-3 pt-2">
+            <button type="button" id="cigarette-price-confirm-btn"
+                    class="touch-btn flex-1 rounded-xl bg-emerald-700 text-white font-bold py-3 text-lg hover:bg-emerald-800">
+                تم
+            </button>
+            <button type="button" id="cigarette-price-cancel-btn"
+                    class="touch-btn flex-1 rounded-xl bg-slate-200 text-slate-700 font-bold py-3 text-lg hover:bg-slate-300">
+                إلغاء
+            </button>
         </div>
     </div>
 </div>
@@ -206,6 +231,10 @@
     const unknownPriceInput = document.getElementById('unknown-price');
     const unknownAddBtn = document.getElementById('unknown-add-btn');
     const unknownCancelBtn = document.getElementById('unknown-cancel-btn');
+    const cigarettePriceModal = document.getElementById('cigarette-price-modal');
+    const cigarettePriceInput = document.getElementById('cigarette-price-input');
+    const cigarettePriceConfirmBtn = document.getElementById('cigarette-price-confirm-btn');
+    const cigarettePriceCancelBtn = document.getElementById('cigarette-price-cancel-btn');
 
     const customerChannel = 'BroadcastChannel' in window ? new BroadcastChannel('alyazori-pos-display') : null;
 
@@ -276,7 +305,7 @@
         el.addEventListener('focus', () => el.select());
     }
 
-    [discountInput, paidInput, unknownPriceInput].forEach(selectAllOnFocus);
+    [discountInput, paidInput, unknownPriceInput, cigarettePriceInput].forEach(selectAllOnFocus);
 
     const toastEl = document.getElementById('toast');
     let toastTimer = null;
@@ -354,6 +383,34 @@
         if (e.key === 'Enter') {
             e.preventDefault();
             unknownAddBtn.click();
+        }
+    });
+
+    function closeCigarettePriceModal() {
+        cigarettePriceModal.classList.add('hidden');
+        cigarettePriceModal.classList.remove('flex');
+        focusBarcode();
+    }
+
+    cigarettePriceCancelBtn.addEventListener('click', closeCigarettePriceModal);
+
+    cigarettePriceConfirmBtn.addEventListener('click', () => {
+        const price = parseFloat(cigarettePriceInput.value);
+
+        if (isNaN(price) || price < 0) {
+            alert('الرجاء إدخال سعر صحيح');
+            cigarettePriceInput.focus();
+            return;
+        }
+
+        addCigaretteToCart(price);
+        closeCigarettePriceModal();
+    });
+
+    cigarettePriceInput.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            cigarettePriceConfirmBtn.click();
         }
     });
 
@@ -514,6 +571,44 @@
             });
             row.appendChild(btn);
         });
+    }
+
+    const CIGARETTE_PRICES = [1.85, 2.10, 2.25, 2.35, 2.40, 2.60, 2.85, 2.90];
+
+    function addCigaretteToCart(price) {
+        const id = `cigarette-${price}`;
+        const existing = cart.get(id);
+        if (existing) {
+            existing.quantity += 1;
+        } else {
+            cart.set(id, { id, name: 'دخان', price, quantity: 1, isCustom: true });
+        }
+        renderCart();
+        focusBarcode();
+    }
+
+    function renderCigarettePrices() {
+        const row = document.getElementById('cigarette-row');
+        CIGARETTE_PRICES.forEach((price) => {
+            const btn = document.createElement('button');
+            btn.type = 'button';
+            btn.className = 'touch-btn w-16 h-16 shrink-0 rounded-lg bg-slate-700 text-white font-extrabold text-sm shadow-sm hover:brightness-110';
+            btn.textContent = money(price);
+            btn.addEventListener('click', () => addCigaretteToCart(price));
+            row.appendChild(btn);
+        });
+
+        const otherBtn = document.createElement('button');
+        otherBtn.type = 'button';
+        otherBtn.className = 'touch-btn w-16 h-16 shrink-0 rounded-lg bg-slate-400 text-white font-bold text-xs shadow-sm hover:brightness-110';
+        otherBtn.textContent = 'سعر آخر';
+        otherBtn.addEventListener('click', () => {
+            cigarettePriceInput.value = '';
+            cigarettePriceModal.classList.remove('hidden');
+            cigarettePriceModal.classList.add('flex');
+            cigarettePriceInput.focus();
+        });
+        row.appendChild(otherBtn);
     }
 
     async function loadQuickItems() {
@@ -853,6 +948,7 @@
 
     renderCart();
     renderQuickPrices();
+    renderCigarettePrices();
     loadQuickItems();
     focusBarcode();
 })();
