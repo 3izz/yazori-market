@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\CashMovement;
+use App\Models\CashReset;
 use App\Models\Product;
 use App\Models\Sale;
 use App\Models\SaleItem;
@@ -35,13 +36,32 @@ class DashboardController extends Controller
 
         $todayTotal = (float) (clone $todaySales)->sum('total');
 
+        // A cash reset moves the reconciliation baseline forward: after a
+        // physical count, "expected cash" should start again from whatever
+        // was left in the drawer, not from the whole business day - otherwise
+        // an end-of-shift count would permanently throw off every
+        // reconciliation that follows it today.
+        $lastReset = CashReset::query()
+            ->where('created_at', '>=', $businessDayStart)
+            ->latest()
+            ->first();
+
+        $reconciliationPeriodStart = $lastReset?->created_at ?? $businessDayStart;
+        $openingFloat = (float) ($lastReset?->left_in_drawer ?? 0);
+
+        $periodSalesTotal = (float) Sale::query()
+            ->where('created_at', '>=', $reconciliationPeriodStart)
+            ->whereNull('refunded_at')
+            ->sum('total');
+
         $todayCashMovements = CashMovement::query()
             ->where('created_at', '>=', $businessDayStart)
             ->orderByDesc('created_at')
             ->get();
 
-        $todayExpenses = (float) $todayCashMovements->where('type', 'expense')->sum('amount');
-        $todayValueReturns = (float) $todayCashMovements->where('type', 'return')->sum('amount');
+        $periodCashMovements = $todayCashMovements->where('created_at', '>=', $reconciliationPeriodStart);
+        $todayExpenses = (float) $periodCashMovements->where('type', 'expense')->sum('amount');
+        $todayValueReturns = (float) $periodCashMovements->where('type', 'return')->sum('amount');
 
         $stats = [
             'today_total' => $todayTotal,
@@ -62,7 +82,10 @@ class DashboardController extends Controller
             'profit_percent' => $totalCost > 0 ? ($totalProfit / $totalCost) * 100 : ($totalRevenue > 0 ? 100 : 0),
             'today_expenses' => $todayExpenses,
             'today_value_returns' => $todayValueReturns,
-            'expected_cash' => $todayTotal - $todayExpenses - $todayValueReturns,
+            'opening_float' => $openingFloat,
+            'period_sales_total' => $periodSalesTotal,
+            'expected_cash' => $openingFloat + $periodSalesTotal - $todayExpenses - $todayValueReturns,
+            'last_reset' => $lastReset,
             'today_cash_movements' => $todayCashMovements,
         ];
 

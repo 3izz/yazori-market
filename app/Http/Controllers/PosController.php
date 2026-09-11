@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\CashMovement;
+use App\Models\CashReset;
 use App\Models\Category;
 use App\Models\Product;
 use App\Models\Sale;
@@ -304,6 +305,40 @@ class PosController extends Controller
         ]);
 
         return response()->json(['success' => true, 'message' => 'تم تسجيل الإرجاع']);
+    }
+
+    /**
+     * Records a physical cash count as a checkpoint: what was actually
+     * counted in the drawer, and how much of it stays behind as the float
+     * for the next shift. From this moment on, the dashboard's expected-cash
+     * reconciliation starts counting sales/expenses/returns fresh from this
+     * checkpoint instead of from the start of the business day, using
+     * left_in_drawer as the new opening balance - otherwise a shift-end count
+     * would permanently throw off every reconciliation after it. Requires
+     * the admin PIN for the same reason storeCashReturn() does: it directly
+     * moves the reported cash baseline, which a dishonest cashier could
+     * otherwise abuse to paper over a shortfall.
+     */
+    public function storeCashReset(Request $request): JsonResponse
+    {
+        $data = $request->validate([
+            'counted_amount' => ['required', 'numeric', 'min:0'],
+            'left_in_drawer' => ['required', 'numeric', 'min:0'],
+            'admin_pin' => ['required', 'string'],
+        ], [], ['counted_amount' => 'المبلغ المعدود', 'left_in_drawer' => 'المبلغ المتبقي بالدرج', 'admin_pin' => 'الرقم السري']);
+
+        if ($data['admin_pin'] !== Setting::get('admin_pin', '0000')) {
+            return response()->json(['success' => false, 'message' => 'الرقم السري غير صحيح'], 422);
+        }
+
+        CashReset::create([
+            'counted_amount' => $data['counted_amount'],
+            'left_in_drawer' => $data['left_in_drawer'],
+            'cashier_name' => session('pos_cashier_name'),
+            'user_id' => Auth::id(),
+        ]);
+
+        return response()->json(['success' => true, 'message' => 'تم تصفير الكاش وتسجيل الرصيد الجديد']);
     }
 
     /**

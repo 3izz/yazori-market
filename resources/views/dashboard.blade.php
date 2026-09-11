@@ -77,12 +77,25 @@
     </div>
 
     <div class="bg-white rounded-xl shadow-sm p-5 mb-6">
-        <h2 class="font-bold text-slate-700 mb-3">مطابقة الكاش لهذا اليوم</h2>
+        <div class="flex items-center justify-between mb-3">
+            <h2 class="font-bold text-slate-700">مطابقة الكاش</h2>
+            <span class="text-xs text-slate-400">
+                @if ($last_reset)
+                    منذ آخر تصفير كاش: {{ $last_reset->created_at->format('Y-m-d h:i A') }}
+                @else
+                    منذ بداية يوم البيع (لم يتم تصفير الكاش اليوم بعد)
+                @endif
+            </span>
+        </div>
 
-        <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
+        <div class="grid grid-cols-2 md:grid-cols-5 gap-4 mb-4">
+            <div>
+                <div class="text-xs text-slate-500 mb-1">الرصيد الافتتاحي</div>
+                <div class="text-lg font-bold text-slate-800">{{ number_format($opening_float, 2) }}</div>
+            </div>
             <div>
                 <div class="text-xs text-slate-500 mb-1">المبيعات</div>
-                <div class="text-lg font-bold text-slate-800">{{ number_format($today_total, 2) }}</div>
+                <div class="text-lg font-bold text-slate-800">{{ number_format($period_sales_total, 2) }}</div>
             </div>
             <div>
                 <div class="text-xs text-slate-500 mb-1">المصروفات</div>

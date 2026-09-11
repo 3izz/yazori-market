@@ -63,6 +63,70 @@
         </div>
     </div>
 
+    <h2>تقسيم المبيعات</h2>
+    <div class="stats">
+        <div class="stat-box">
+            <div class="label">باقي المبيعات</div>
+            <div class="value">{{ number_format($rest_subtotal, 2) }}</div>
+        </div>
+        <div class="stat-box">
+            <div class="label">مبيعات دخان</div>
+            <div class="value">{{ number_format($cigarette_total, 2) }}</div>
+        </div>
+        <div class="stat-box">
+            <div class="label">مبيعات سكاكر</div>
+            <div class="value">{{ number_format($candy_total, 2) }}</div>
+        </div>
+        <div class="stat-box">
+            <div class="label">الإجمالي</div>
+            <div class="value">{{ number_format($total_amount, 2) }}</div>
+        </div>
+    </div>
+
+    @if ($cigarette_breakdown->isNotEmpty())
+        <h2>جرد الدخان حسب السعر</h2>
+        <table>
+            <thead>
+                <tr>
+                    <th>السعر</th>
+                    <th>الكمية المباعة</th>
+                    <th>الإجمالي</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach ($cigarette_breakdown as $row)
+                    <tr>
+                        <td>{{ number_format($row['price'], 2) }}</td>
+                        <td>{{ rtrim(rtrim(number_format($row['quantity'], 3), '0'), '.') ?: '0' }}</td>
+                        <td>{{ number_format($row['subtotal'], 2) }}</td>
+                    </tr>
+                @endforeach
+            </tbody>
+        </table>
+    @endif
+
+    @if ($candy_breakdown->isNotEmpty())
+        <h2>جرد السكاكر حسب السعر</h2>
+        <table>
+            <thead>
+                <tr>
+                    <th>السعر</th>
+                    <th>الكمية المباعة</th>
+                    <th>الإجمالي</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach ($candy_breakdown as $row)
+                    <tr>
+                        <td>{{ number_format($row['price'], 2) }}</td>
+                        <td>{{ rtrim(rtrim(number_format($row['quantity'], 3), '0'), '.') ?: '0' }}</td>
+                        <td>{{ number_format($row['subtotal'], 2) }}</td>
+                    </tr>
+                @endforeach
+            </tbody>
+        </table>
+    @endif
+
     <h2>الأصناف الأكثر مبيعاً اليوم</h2>
     @if ($top_products->isEmpty())
         <p>لا توجد مبيعات بعد اليوم.</p>

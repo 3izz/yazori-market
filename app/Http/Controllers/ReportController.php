@@ -36,6 +36,26 @@ class ReportController extends Controller
             ->loadMissing('product')
             ->sum(fn (SaleItem $item) => $item->quantity * (float) ($item->product->purchase_price ?? 0));
 
+        // دخان and سكاكر are quick-tap POS entries, not real barcoded
+        // products (product_id is null for them) - lumped in with everything
+        // else they'd be invisible in "top products", so they're broken out
+        // by price point here the same way an inventory count would.
+        $breakdownByName = fn (string $name) => $items->where('product_name', $name)
+            ->groupBy('price')
+            ->map(fn ($group) => [
+                'price' => (float) $group->first()->price,
+                'quantity' => $group->sum('quantity'),
+                'subtotal' => $group->sum('subtotal'),
+            ])
+            ->sortBy('price')
+            ->values();
+
+        $cigaretteBreakdown = $breakdownByName('دخان');
+        $candyBreakdown = $breakdownByName('سكاكر');
+        $cigaretteTotal = $cigaretteBreakdown->sum('subtotal');
+        $candyTotal = $candyBreakdown->sum('subtotal');
+        $restSubtotal = $items->sum('subtotal') - $cigaretteTotal - $candyTotal;
+
         $stats = [
             'business_day_start' => $businessDayStart,
             'sales' => $sales,
@@ -45,6 +65,11 @@ class ReportController extends Controller
             'top_products' => $topProducts,
             'total_cost' => $totalCost,
             'total_profit' => $sales->sum('total') - $totalCost,
+            'cigarette_breakdown' => $cigaretteBreakdown,
+            'cigarette_total' => $cigaretteTotal,
+            'candy_breakdown' => $candyBreakdown,
+            'candy_total' => $candyTotal,
+            'rest_subtotal' => $restSubtotal,
         ];
 
         return view('reports.daily', $stats);

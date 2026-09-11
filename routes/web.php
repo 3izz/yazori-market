@@ -33,6 +33,7 @@ Route::middleware('pos.access')->group(function () {
     Route::post('/pos/returns', [PosController::class, 'processReturn'])->name('pos.returns.process');
     Route::post('/pos/expenses', [PosController::class, 'storeExpense'])->name('pos.expenses.store');
     Route::post('/pos/cash-returns', [PosController::class, 'storeCashReturn'])->name('pos.cashReturns.store');
+    Route::post('/pos/cash-resets', [PosController::class, 'storeCashReset'])->name('pos.cashResets.store');
     Route::post('/sales/{sale}/print-thermal', [SaleController::class, 'printThermal'])->name('sales.printThermal');
 });
 

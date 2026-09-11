@@ -36,6 +36,14 @@
                         class="touch-btn rounded-lg bg-slate-600 px-4 py-3 text-sm font-semibold hover:bg-slate-500">
                     مصروفات
                 </button>
+                <button type="button" id="cash-reset-btn"
+                        class="touch-btn rounded-lg bg-purple-800 px-4 py-3 text-sm font-semibold hover:bg-purple-700">
+                    تصفير الكاش
+                </button>
+                <button type="button" id="open-drawer-btn"
+                        class="touch-btn rounded-lg bg-slate-600 px-4 py-3 text-sm font-semibold hover:bg-slate-500">
+                    فتح الكاش بدون فاتورة
+                </button>
                 <button type="button" id="open-customer-display-btn"
                         class="touch-btn rounded-lg bg-emerald-700 px-4 py-3 text-sm font-semibold hover:bg-emerald-600">
                     فتح شاشة الزبون

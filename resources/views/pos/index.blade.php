@@ -192,6 +192,38 @@
     </div>
 </div>
 
+<div id="cash-reset-modal" class="hidden fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4">
+    <div class="bg-white rounded-2xl p-6 w-full max-w-sm space-y-4">
+        <h3 class="text-lg font-bold text-slate-800">تصفير الكاش</h3>
+        <div>
+            <label class="block text-sm font-semibold text-slate-700 mb-1">المبلغ المعدود فعلياً بالدرج</label>
+            <input type="number" id="cash-reset-counted-input" min="0" step="0.01" inputmode="decimal"
+                   class="w-full rounded-lg border border-slate-300 px-4 py-3 text-lg">
+        </div>
+        <div>
+            <label class="block text-sm font-semibold text-slate-700 mb-1">المبلغ اللي رح يبقى بالدرج (رصيد افتتاحي جديد)</label>
+            <input type="number" id="cash-reset-left-input" min="0" step="0.01" inputmode="decimal"
+                   class="w-full rounded-lg border border-slate-300 px-4 py-3 text-lg">
+        </div>
+        <div>
+            <label class="block text-sm font-semibold text-slate-700 mb-1">الرقم السري الإداري (للتأكيد)</label>
+            <input type="password" id="cash-reset-pin-input" inputmode="numeric"
+                   class="w-full rounded-lg border border-slate-300 px-4 py-3 text-lg" dir="ltr">
+        </div>
+        <p id="cash-reset-error" class="text-sm text-red-600 hidden"></p>
+        <div class="flex gap-3 pt-2">
+            <button type="button" id="cash-reset-confirm-btn"
+                    class="touch-btn flex-1 rounded-xl bg-purple-800 text-white font-bold py-3 text-lg hover:bg-purple-900">
+                تأكيد التصفير
+            </button>
+            <button type="button" id="cash-reset-cancel-btn"
+                    class="touch-btn flex-1 rounded-xl bg-slate-200 text-slate-700 font-bold py-3 text-lg hover:bg-slate-300">
+                إلغاء
+            </button>
+        </div>
+    </div>
+</div>
+
 <div id="cigarette-price-modal" class="hidden fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4">
     <div class="bg-white rounded-2xl p-6 w-full max-w-sm space-y-4">
         <h3 class="text-lg font-bold text-slate-800">دخان — سعر آخر</h3>
@@ -308,6 +340,15 @@
     const cashReturnError = document.getElementById('cash-return-error');
     const cashReturnConfirmBtn = document.getElementById('cash-return-confirm-btn');
     const cashReturnCancelBtn = document.getElementById('cash-return-cancel-btn');
+    const openDrawerBtn = document.getElementById('open-drawer-btn');
+    const cashResetBtn = document.getElementById('cash-reset-btn');
+    const cashResetModal = document.getElementById('cash-reset-modal');
+    const cashResetCountedInput = document.getElementById('cash-reset-counted-input');
+    const cashResetLeftInput = document.getElementById('cash-reset-left-input');
+    const cashResetPinInput = document.getElementById('cash-reset-pin-input');
+    const cashResetError = document.getElementById('cash-reset-error');
+    const cashResetConfirmBtn = document.getElementById('cash-reset-confirm-btn');
+    const cashResetCancelBtn = document.getElementById('cash-reset-cancel-btn');
 
     const customerChannel = 'BroadcastChannel' in window ? new BroadcastChannel('alyazori-pos-display') : null;
 
@@ -378,7 +419,7 @@
         el.addEventListener('focus', () => el.select());
     }
 
-    [discountInput, paidInput, unknownPriceInput, cigarettePriceInput, expenseAmountInput, cashReturnAmountInput].forEach(selectAllOnFocus);
+    [discountInput, paidInput, unknownPriceInput, cigarettePriceInput, expenseAmountInput, cashReturnAmountInput, cashResetCountedInput, cashResetLeftInput].forEach(selectAllOnFocus);
 
     const toastEl = document.getElementById('toast');
     let toastTimer = null;
@@ -1003,6 +1044,105 @@
             cashReturnError.classList.remove('hidden');
         } finally {
             cashReturnConfirmBtn.disabled = false;
+        }
+    });
+
+    // Open the drawer without a sale (e.g. to make change)
+    openDrawerBtn.addEventListener('click', async () => {
+        openDrawerBtn.disabled = true;
+        try {
+            const res = await fetch(`{{ route('pos.openDrawer') }}`, {
+                method: 'POST',
+                headers: {
+                    'X-CSRF-TOKEN': csrfToken,
+                    'Accept': 'application/json',
+                },
+            });
+            const data = await res.json();
+            showToast(data.message || 'تم فتح الدرج', !res.ok);
+        } catch (e) {
+            showToast('تعذر فتح الدرج', true);
+        } finally {
+            openDrawerBtn.disabled = false;
+            focusBarcode();
+        }
+    });
+
+    // Cash reset (physical count checkpoint) - requires the admin PIN since
+    // it directly moves the reconciliation baseline reported on the dashboard.
+    function closeCashResetModal() {
+        cashResetModal.classList.add('hidden');
+        cashResetModal.classList.remove('flex');
+        cashResetError.classList.add('hidden');
+        focusBarcode();
+    }
+
+    cashResetBtn.addEventListener('click', () => {
+        cashResetCountedInput.value = '';
+        cashResetLeftInput.value = '';
+        cashResetPinInput.value = '';
+        cashResetError.classList.add('hidden');
+        cashResetModal.classList.remove('hidden');
+        cashResetModal.classList.add('flex');
+        cashResetCountedInput.focus();
+    });
+
+    cashResetCancelBtn.addEventListener('click', closeCashResetModal);
+
+    cashResetConfirmBtn.addEventListener('click', async () => {
+        const counted = parseFloat(cashResetCountedInput.value);
+        const leftInDrawer = parseFloat(cashResetLeftInput.value);
+        const adminPin = cashResetPinInput.value.trim();
+
+        if (isNaN(counted) || counted < 0) {
+            cashResetError.textContent = 'الرجاء إدخال المبلغ المعدود بشكل صحيح';
+            cashResetError.classList.remove('hidden');
+            cashResetCountedInput.focus();
+            return;
+        }
+
+        if (isNaN(leftInDrawer) || leftInDrawer < 0) {
+            cashResetError.textContent = 'الرجاء إدخال المبلغ المتبقي بالدرج بشكل صحيح';
+            cashResetError.classList.remove('hidden');
+            cashResetLeftInput.focus();
+            return;
+        }
+
+        if (!adminPin) {
+            cashResetError.textContent = 'الرجاء إدخال الرقم السري';
+            cashResetError.classList.remove('hidden');
+            cashResetPinInput.focus();
+            return;
+        }
+
+        cashResetConfirmBtn.disabled = true;
+
+        try {
+            const res = await fetch(`{{ route('pos.cashResets.store') }}`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': csrfToken,
+                    'Accept': 'application/json',
+                },
+                body: JSON.stringify({ counted_amount: counted, left_in_drawer: leftInDrawer, admin_pin: adminPin }),
+            });
+            const data = await res.json();
+
+            if (!res.ok) {
+                cashResetError.textContent = data.message || 'تعذر تصفير الكاش';
+                cashResetError.classList.remove('hidden');
+                cashResetPinInput.focus();
+                return;
+            }
+
+            showToast('تم تصفير الكاش ✓', false);
+            closeCashResetModal();
+        } catch (e) {
+            cashResetError.textContent = 'حدث خطأ أثناء التسجيل';
+            cashResetError.classList.remove('hidden');
+        } finally {
+            cashResetConfirmBtn.disabled = false;
         }
     });
 
