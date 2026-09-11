@@ -6,13 +6,13 @@
     <div class="flex items-center gap-3 mb-5">
         <h1 class="text-xl font-bold text-slate-800">لوحة التحكم</h1>
         <button type="button" id="dashboard-reveal-btn"
-                class="h-9 w-9 shrink-0 rounded-full {{ $dashboardRevealed ? 'bg-slate-200 text-slate-500' : 'bg-emerald-700 text-white' }} text-lg hover:brightness-95"
+                class="h-9 w-9 shrink-0 rounded-full bg-emerald-700 text-white text-lg hover:brightness-95"
                 title="إظهار الأرقام">
             👁
         </button>
     </div>
 
-    <div id="dashboard-blur-1" class="{{ $dashboardRevealed ? '' : 'blur-md select-none pointer-events-none' }}">
+    <div id="dashboard-blur-1" class="blur-md select-none pointer-events-none">
 
     @if ($low_stock->isNotEmpty())
         <a href="{{ route('inventory.index', ['low_only' => 1]) }}"
@@ -159,7 +159,7 @@
         </a>
     </div>
 
-    <div id="dashboard-blur-2" class="{{ $dashboardRevealed ? '' : 'blur-md select-none pointer-events-none' }}">
+    <div id="dashboard-blur-2" class="blur-md select-none pointer-events-none">
     <div class="bg-white rounded-xl shadow-sm overflow-hidden">
         <div class="px-4 py-3 border-b font-bold text-slate-700">منتجات قاربت على النفاد</div>
         @if ($low_stock->isEmpty())

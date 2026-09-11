@@ -90,7 +90,6 @@ class DashboardController extends Controller
             'expected_cash' => $openingFloat + $periodSalesTotal - $todayExpenses - $todayValueReturns,
             'last_reset' => $lastReset,
             'today_cash_movements' => $todayCashMovements,
-            'dashboardRevealed' => (bool) session('dashboard_revealed', false),
         ];
 
         return view('dashboard', $stats);
@@ -98,9 +97,11 @@ class DashboardController extends Controller
 
     /**
      * The dashboard's figures render blurred by default (see index()) since
-     * it's reachable with no PIN redirect at all; this is the eye-icon
-     * action that unblurs them for the rest of the session after confirming
-     * the admin PIN, without navigating away from the page.
+     * it's reachable with no PIN redirect at all. This is the eye-icon
+     * action that unblurs them - but only for the currently loaded page:
+     * it just verifies the PIN and hands back success, with no session
+     * flag at all, so leaving the dashboard for anywhere else and coming
+     * back always starts blurred again and asks for the PIN once more.
      */
     public function reveal(Request $request): JsonResponse
     {
@@ -109,8 +110,6 @@ class DashboardController extends Controller
         if ($data['pin'] !== Setting::get('admin_pin', '0000')) {
             return response()->json(['success' => false, 'message' => 'الرقم السري غير صحيح'], 422);
         }
-
-        $request->session()->put('dashboard_revealed', true);
 
         return response()->json(['success' => true]);
     }
