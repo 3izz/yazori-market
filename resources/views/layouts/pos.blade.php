@@ -17,7 +17,6 @@
                     <div class="font-bold">اليازوري ماركت — نقطة البيع</div>
                     <div class="text-xs text-emerald-200 flex flex-wrap gap-x-3">
                         <span>آخر فاتورة: <span id="header-last-invoice">{{ $lastInvoiceNumber ?? '—' }}</span></span>
-                        <span>مبيعات اليوم: <span id="header-today-total">{{ number_format($todayTotal ?? 0, 2) }}</span></span>
                         @if (! empty($cashierName))
                             <span>الكاشير: {{ $cashierName }}</span>
                         @endif
@@ -28,6 +27,14 @@
                 <button type="button" id="return-invoice-btn"
                         class="touch-btn rounded-lg bg-amber-700 px-4 py-3 text-sm font-semibold hover:bg-amber-600">
                     استرجاع فاتورة
+                </button>
+                <button type="button" id="cash-return-btn"
+                        class="touch-btn rounded-lg bg-red-800 px-4 py-3 text-sm font-semibold hover:bg-red-700">
+                    إرجاع بالقيمة
+                </button>
+                <button type="button" id="expense-btn"
+                        class="touch-btn rounded-lg bg-slate-600 px-4 py-3 text-sm font-semibold hover:bg-slate-500">
+                    مصروفات
                 </button>
                 <button type="button" id="open-customer-display-btn"
                         class="touch-btn rounded-lg bg-emerald-700 px-4 py-3 text-sm font-semibold hover:bg-emerald-600">

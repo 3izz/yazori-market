@@ -133,6 +133,65 @@
     </div>
 </div>
 
+<div id="expense-modal" class="hidden fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4">
+    <div class="bg-white rounded-2xl p-6 w-full max-w-sm space-y-4">
+        <h3 class="text-lg font-bold text-slate-800">تسجيل مصروف</h3>
+        <div>
+            <label class="block text-sm font-semibold text-slate-700 mb-1">المبلغ</label>
+            <input type="number" id="expense-amount-input" min="0" step="0.01" inputmode="decimal"
+                   class="w-full rounded-lg border border-slate-300 px-4 py-3 text-lg">
+        </div>
+        <div>
+            <label class="block text-sm font-semibold text-slate-700 mb-1">السبب</label>
+            <input type="text" id="expense-reason-input" placeholder="مثال: شراء أكياس"
+                   class="w-full rounded-lg border border-slate-300 px-4 py-3 text-lg">
+        </div>
+        <p id="expense-error" class="text-sm text-red-600 hidden"></p>
+        <div class="flex gap-3 pt-2">
+            <button type="button" id="expense-confirm-btn"
+                    class="touch-btn flex-1 rounded-xl bg-slate-700 text-white font-bold py-3 text-lg hover:bg-slate-800">
+                تسجيل
+            </button>
+            <button type="button" id="expense-cancel-btn"
+                    class="touch-btn flex-1 rounded-xl bg-slate-200 text-slate-700 font-bold py-3 text-lg hover:bg-slate-300">
+                إلغاء
+            </button>
+        </div>
+    </div>
+</div>
+
+<div id="cash-return-modal" class="hidden fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4">
+    <div class="bg-white rounded-2xl p-6 w-full max-w-sm space-y-4">
+        <h3 class="text-lg font-bold text-slate-800">إرجاع بالقيمة</h3>
+        <div>
+            <label class="block text-sm font-semibold text-slate-700 mb-1">المبلغ</label>
+            <input type="number" id="cash-return-amount-input" min="0" step="0.01" inputmode="decimal"
+                   class="w-full rounded-lg border border-slate-300 px-4 py-3 text-lg">
+        </div>
+        <div>
+            <label class="block text-sm font-semibold text-slate-700 mb-1">السبب</label>
+            <input type="text" id="cash-return-reason-input" placeholder="مثال: إرجاع نقدي للزبون"
+                   class="w-full rounded-lg border border-slate-300 px-4 py-3 text-lg">
+        </div>
+        <div>
+            <label class="block text-sm font-semibold text-slate-700 mb-1">الرقم السري الإداري (للتأكيد)</label>
+            <input type="password" id="cash-return-pin-input" inputmode="numeric"
+                   class="w-full rounded-lg border border-slate-300 px-4 py-3 text-lg" dir="ltr">
+        </div>
+        <p id="cash-return-error" class="text-sm text-red-600 hidden"></p>
+        <div class="flex gap-3 pt-2">
+            <button type="button" id="cash-return-confirm-btn"
+                    class="touch-btn flex-1 rounded-xl bg-red-700 text-white font-bold py-3 text-lg hover:bg-red-800">
+                تأكيد الإرجاع
+            </button>
+            <button type="button" id="cash-return-cancel-btn"
+                    class="touch-btn flex-1 rounded-xl bg-slate-200 text-slate-700 font-bold py-3 text-lg hover:bg-slate-300">
+                إلغاء
+            </button>
+        </div>
+    </div>
+</div>
+
 <div id="cigarette-price-modal" class="hidden fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4">
     <div class="bg-white rounded-2xl p-6 w-full max-w-sm space-y-4">
         <h3 class="text-lg font-bold text-slate-800">دخان — سعر آخر</h3>
@@ -185,7 +244,6 @@
     const csrfToken = document.querySelector('meta[name="csrf-token"]').content;
     const isAdminSession = @json(auth()->check());
     const cart = new Map();
-    let todayTotal = {{ (float) ($todayTotal ?? 0) }};
 
     // Web Audio oscillator beeps - no audio files needed, works fully offline.
     let audioCtx = null;
@@ -235,6 +293,21 @@
     const cigarettePriceInput = document.getElementById('cigarette-price-input');
     const cigarettePriceConfirmBtn = document.getElementById('cigarette-price-confirm-btn');
     const cigarettePriceCancelBtn = document.getElementById('cigarette-price-cancel-btn');
+    const expenseBtn = document.getElementById('expense-btn');
+    const expenseModal = document.getElementById('expense-modal');
+    const expenseAmountInput = document.getElementById('expense-amount-input');
+    const expenseReasonInput = document.getElementById('expense-reason-input');
+    const expenseError = document.getElementById('expense-error');
+    const expenseConfirmBtn = document.getElementById('expense-confirm-btn');
+    const expenseCancelBtn = document.getElementById('expense-cancel-btn');
+    const cashReturnBtn = document.getElementById('cash-return-btn');
+    const cashReturnModal = document.getElementById('cash-return-modal');
+    const cashReturnAmountInput = document.getElementById('cash-return-amount-input');
+    const cashReturnReasonInput = document.getElementById('cash-return-reason-input');
+    const cashReturnPinInput = document.getElementById('cash-return-pin-input');
+    const cashReturnError = document.getElementById('cash-return-error');
+    const cashReturnConfirmBtn = document.getElementById('cash-return-confirm-btn');
+    const cashReturnCancelBtn = document.getElementById('cash-return-cancel-btn');
 
     const customerChannel = 'BroadcastChannel' in window ? new BroadcastChannel('alyazori-pos-display') : null;
 
@@ -305,7 +378,7 @@
         el.addEventListener('focus', () => el.select());
     }
 
-    [discountInput, paidInput, unknownPriceInput, cigarettePriceInput].forEach(selectAllOnFocus);
+    [discountInput, paidInput, unknownPriceInput, cigarettePriceInput, expenseAmountInput, cashReturnAmountInput].forEach(selectAllOnFocus);
 
     const toastEl = document.getElementById('toast');
     let toastTimer = null;
@@ -751,8 +824,6 @@
 
             broadcastCompleted(parseFloat(totalValue.textContent) || 0);
 
-            todayTotal += data.total || 0;
-            document.getElementById('header-today-total').textContent = money(todayTotal);
             document.getElementById('header-last-invoice').textContent = data.invoice_number;
 
             clickedBtn.textContent = shouldPrint ? 'جارٍ الطباعة...' : 'جارٍ فتح الدرج...';
@@ -789,6 +860,151 @@
 
     checkoutBtn.addEventListener('click', () => handleCheckout(checkoutBtn));
     checkoutNoPrintBtn.addEventListener('click', () => handleCheckout(checkoutNoPrintBtn));
+
+    // Expenses
+    function closeExpenseModal() {
+        expenseModal.classList.add('hidden');
+        expenseModal.classList.remove('flex');
+        expenseError.classList.add('hidden');
+        focusBarcode();
+    }
+
+    expenseBtn.addEventListener('click', () => {
+        expenseAmountInput.value = '';
+        expenseReasonInput.value = '';
+        expenseError.classList.add('hidden');
+        expenseModal.classList.remove('hidden');
+        expenseModal.classList.add('flex');
+        expenseAmountInput.focus();
+    });
+
+    expenseCancelBtn.addEventListener('click', closeExpenseModal);
+
+    expenseConfirmBtn.addEventListener('click', async () => {
+        const amount = parseFloat(expenseAmountInput.value);
+        const reason = expenseReasonInput.value.trim();
+
+        if (isNaN(amount) || amount <= 0) {
+            expenseError.textContent = 'الرجاء إدخال مبلغ صحيح';
+            expenseError.classList.remove('hidden');
+            expenseAmountInput.focus();
+            return;
+        }
+
+        if (!reason) {
+            expenseError.textContent = 'الرجاء إدخال السبب';
+            expenseError.classList.remove('hidden');
+            expenseReasonInput.focus();
+            return;
+        }
+
+        expenseConfirmBtn.disabled = true;
+
+        try {
+            const res = await fetch(`{{ route('pos.expenses.store') }}`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': csrfToken,
+                    'Accept': 'application/json',
+                },
+                body: JSON.stringify({ amount, reason }),
+            });
+            const data = await res.json();
+
+            if (!res.ok) {
+                expenseError.textContent = data.message || 'تعذر تسجيل المصروف';
+                expenseError.classList.remove('hidden');
+                return;
+            }
+
+            showToast('تم تسجيل المصروف ✓', false);
+            closeExpenseModal();
+        } catch (e) {
+            expenseError.textContent = 'حدث خطأ أثناء التسجيل';
+            expenseError.classList.remove('hidden');
+        } finally {
+            expenseConfirmBtn.disabled = false;
+        }
+    });
+
+    // Cash return by value (not tied to a specific invoice) - requires the
+    // admin PIN as an explicit authorization step, checked server-side.
+    function closeCashReturnModal() {
+        cashReturnModal.classList.add('hidden');
+        cashReturnModal.classList.remove('flex');
+        cashReturnError.classList.add('hidden');
+        focusBarcode();
+    }
+
+    cashReturnBtn.addEventListener('click', () => {
+        cashReturnAmountInput.value = '';
+        cashReturnReasonInput.value = '';
+        cashReturnPinInput.value = '';
+        cashReturnError.classList.add('hidden');
+        cashReturnModal.classList.remove('hidden');
+        cashReturnModal.classList.add('flex');
+        cashReturnAmountInput.focus();
+    });
+
+    cashReturnCancelBtn.addEventListener('click', closeCashReturnModal);
+
+    cashReturnConfirmBtn.addEventListener('click', async () => {
+        const amount = parseFloat(cashReturnAmountInput.value);
+        const reason = cashReturnReasonInput.value.trim();
+        const adminPin = cashReturnPinInput.value.trim();
+
+        if (isNaN(amount) || amount <= 0) {
+            cashReturnError.textContent = 'الرجاء إدخال مبلغ صحيح';
+            cashReturnError.classList.remove('hidden');
+            cashReturnAmountInput.focus();
+            return;
+        }
+
+        if (!reason) {
+            cashReturnError.textContent = 'الرجاء إدخال السبب';
+            cashReturnError.classList.remove('hidden');
+            cashReturnReasonInput.focus();
+            return;
+        }
+
+        if (!adminPin) {
+            cashReturnError.textContent = 'الرجاء إدخال الرقم السري';
+            cashReturnError.classList.remove('hidden');
+            cashReturnPinInput.focus();
+            return;
+        }
+
+        cashReturnConfirmBtn.disabled = true;
+
+        try {
+            const res = await fetch(`{{ route('pos.cashReturns.store') }}`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': csrfToken,
+                    'Accept': 'application/json',
+                },
+                body: JSON.stringify({ amount, reason, admin_pin: adminPin }),
+            });
+            const data = await res.json();
+
+            if (!res.ok) {
+                cashReturnError.textContent = data.message || 'تعذر تسجيل الإرجاع';
+                cashReturnError.classList.remove('hidden');
+                cashReturnPinInput.focus();
+                return;
+            }
+
+            showToast('تم تسجيل الإرجاع ✓', false);
+            closeCashReturnModal();
+        } catch (e) {
+            cashReturnError.textContent = 'حدث خطأ أثناء التسجيل';
+            cashReturnError.classList.remove('hidden');
+        } finally {
+            cashReturnConfirmBtn.disabled = false;
+        }
+    });
 
     // Keep the barcode field focused for scanner input, without blocking mouse/keyboard use elsewhere.
     document.addEventListener('click', (e) => {
@@ -895,9 +1111,6 @@
                 alert(data.message || 'تعذر استرجاع الفاتورة');
                 return;
             }
-
-            todayTotal = Math.max(todayTotal - foundReturnSale.total, 0);
-            document.getElementById('header-today-total').textContent = money(todayTotal);
 
             showToast('تم استرجاع الفاتورة بنجاح ✓', false);
             closeReturnModal();

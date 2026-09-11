@@ -31,6 +31,8 @@ Route::middleware('pos.access')->group(function () {
     Route::post('/pos/lock', [PosController::class, 'lock'])->name('pos.lock');
     Route::get('/pos/returns/lookup', [PosController::class, 'lookupReturn'])->name('pos.returns.lookup');
     Route::post('/pos/returns', [PosController::class, 'processReturn'])->name('pos.returns.process');
+    Route::post('/pos/expenses', [PosController::class, 'storeExpense'])->name('pos.expenses.store');
+    Route::post('/pos/cash-returns', [PosController::class, 'storeCashReturn'])->name('pos.cashReturns.store');
     Route::post('/sales/{sale}/print-thermal', [SaleController::class, 'printThermal'])->name('sales.printThermal');
 });
 

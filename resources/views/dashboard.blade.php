@@ -76,6 +76,50 @@
         @endif
     </div>
 
+    <div class="bg-white rounded-xl shadow-sm p-5 mb-6">
+        <h2 class="font-bold text-slate-700 mb-3">مطابقة الكاش لهذا اليوم</h2>
+
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
+            <div>
+                <div class="text-xs text-slate-500 mb-1">المبيعات</div>
+                <div class="text-lg font-bold text-slate-800">{{ number_format($today_total, 2) }}</div>
+            </div>
+            <div>
+                <div class="text-xs text-slate-500 mb-1">المصروفات</div>
+                <div class="text-lg font-bold text-amber-700">{{ number_format($today_expenses, 2) }}</div>
+            </div>
+            <div>
+                <div class="text-xs text-slate-500 mb-1">الإرجاع بالقيمة</div>
+                <div class="text-lg font-bold text-red-600">{{ number_format($today_value_returns, 2) }}</div>
+            </div>
+            <div>
+                <div class="text-xs text-slate-500 mb-1">الكاش المتوقع بالدرج</div>
+                <div class="text-lg font-extrabold text-emerald-700">{{ number_format($expected_cash, 2) }}</div>
+            </div>
+        </div>
+
+        <div class="border-t pt-3">
+            <h3 class="text-sm font-bold text-slate-600 mb-2">سجل المصروفات والإرجاع اليوم</h3>
+            @if ($today_cash_movements->isEmpty())
+                <p class="text-sm text-slate-400">لا توجد حركات مسجلة اليوم.</p>
+            @else
+                <ul class="text-sm divide-y">
+                    @foreach ($today_cash_movements as $movement)
+                        <li class="py-2 flex items-center justify-between gap-3">
+                            <span class="{{ $movement->type === 'expense' ? 'text-amber-700' : 'text-red-600' }} font-semibold shrink-0">
+                                {{ $movement->type === 'expense' ? 'مصروف' : 'إرجاع' }}
+                            </span>
+                            <span class="flex-1 text-slate-600 truncate">{{ $movement->reason }}</span>
+                            <span class="text-slate-400 text-xs shrink-0">{{ $movement->cashier_name ?: '—' }}</span>
+                            <span class="font-bold shrink-0">{{ number_format($movement->amount, 2) }}</span>
+                            <span class="text-slate-400 text-xs shrink-0">{{ $movement->created_at->format('h:i A') }}</span>
+                        </li>
+                    @endforeach
+                </ul>
+            @endif
+        </div>
+    </div>
+
     <div class="flex flex-wrap gap-3 mb-6">
         <a href="{{ route('pos.index') }}" class="rounded-xl bg-emerald-700 text-white font-bold px-6 py-4 text-lg shadow hover:bg-emerald-800">
             فتح نقطة البيع

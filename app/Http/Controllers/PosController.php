@@ -2,10 +2,12 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\CashMovement;
 use App\Models\Category;
 use App\Models\Product;
 use App\Models\Sale;
 use App\Models\SaleItem;
+use App\Models\Setting;
 use App\Services\ThermalPrintService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -19,13 +21,14 @@ class PosController extends Controller
     {
         $businessDayStart = Sale::currentBusinessDayStart();
 
-        $todaySales = Sale::query()
+        $lastInvoiceNumber = Sale::query()
             ->where('created_at', '>=', $businessDayStart)
-            ->whereNull('refunded_at');
+            ->whereNull('refunded_at')
+            ->orderByDesc('id')
+            ->value('invoice_number');
 
         return view('pos.index', [
-            'todayTotal' => (float) (clone $todaySales)->sum('total'),
-            'lastInvoiceNumber' => (clone $todaySales)->orderByDesc('id')->value('invoice_number'),
+            'lastInvoiceNumber' => $lastInvoiceNumber,
             'cashierName' => session('pos_cashier_name'),
         ]);
     }
@@ -252,6 +255,55 @@ class PosController extends Controller
         }
 
         return response()->json(['success' => true, 'message' => 'تم استرجاع الفاتورة وإعادة الكمية للمخزون', 'sale_id' => $sale->id]);
+    }
+
+    public function storeExpense(Request $request): JsonResponse
+    {
+        $data = $request->validate([
+            'amount' => ['required', 'numeric', 'min:0.01'],
+            'reason' => ['required', 'string', 'max:150'],
+        ], [], ['amount' => 'المبلغ', 'reason' => 'السبب']);
+
+        CashMovement::create([
+            'type' => 'expense',
+            'amount' => $data['amount'],
+            'reason' => $data['reason'],
+            'cashier_name' => session('pos_cashier_name'),
+            'user_id' => Auth::id(),
+        ]);
+
+        return response()->json(['success' => true, 'message' => 'تم تسجيل المصروف']);
+    }
+
+    /**
+     * A cash return not tied to a specific invoice is an easy way for a
+     * dishonest cashier to pocket money by claiming a "return" that never
+     * happened, so - unlike storeExpense() above - this one requires the
+     * admin PIN (the same one that gates admin-page navigation) to be typed
+     * again as an explicit authorization step, checked server-side so it can
+     * never be bypassed from the browser.
+     */
+    public function storeCashReturn(Request $request): JsonResponse
+    {
+        $data = $request->validate([
+            'amount' => ['required', 'numeric', 'min:0.01'],
+            'reason' => ['required', 'string', 'max:150'],
+            'admin_pin' => ['required', 'string'],
+        ], [], ['amount' => 'المبلغ', 'reason' => 'السبب', 'admin_pin' => 'الرقم السري']);
+
+        if ($data['admin_pin'] !== Setting::get('admin_pin', '0000')) {
+            return response()->json(['success' => false, 'message' => 'الرقم السري غير صحيح'], 422);
+        }
+
+        CashMovement::create([
+            'type' => 'return',
+            'amount' => $data['amount'],
+            'reason' => $data['reason'],
+            'cashier_name' => session('pos_cashier_name'),
+            'user_id' => Auth::id(),
+        ]);
+
+        return response()->json(['success' => true, 'message' => 'تم تسجيل الإرجاع']);
     }
 
     /**
