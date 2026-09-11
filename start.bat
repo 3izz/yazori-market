@@ -22,8 +22,8 @@ echo.
 
 if not exist "%PHP_EXE%" (
     echo خطأ: تعذر إيجاد برنامج PHP المرفق مع النظام "php-runtime".
-    echo لازم تنسخ مجلد البرنامج بالكامل من الجهاز الأصلي "usb أو نسخ مباشر".
-    echo لا تستخدم GitHub لنقل البرنامج، لأنو ملفات مهمة "php-runtime" غير مرفوعة هناك عن قصد.
+    echo هاد المجلد كبير الحجم ومو موجود على GitHub عن قصد، فمجلد "php-runtime" لازم يوصل
+    echo بس عن طريق نسخة كاملة من الجهاز الأصلي "usb أو نسخ مباشر" - ليس عن طريق update.bat.
     echo.
     pause
     exit /b 1
@@ -31,8 +31,8 @@ if not exist "%PHP_EXE%" (
 
 if not exist "%~dp0vendor\autoload.php" (
     echo خطأ: مجلد "vendor" غير موجود أو ناقص، والبرنامج ما رح يشتغل بدونه.
-    echo إذا نسخت البرنامج من GitHub: هاد المجلد غير موجود هناك عن قصد "حجمه كبير".
-    echo الحل: انسخ مجلد البرنامج بالكامل من الجهاز الأصلي "usb أو نسخ مباشر" بدل GitHub.
+    echo هاد المجلد كبير الحجم ومو موجود على GitHub عن قصد، فمجلد "vendor" لازم يوصل
+    echo بس عن طريق نسخة كاملة من الجهاز الأصلي "usb أو نسخ مباشر" - ليس عن طريق update.bat.
     echo.
     pause
     exit /b 1
@@ -56,6 +56,12 @@ if not exist "%~dp0database\database.sqlite" (
     type nul > "%~dp0database\database.sqlite"
     "%PHP_EXE%" -c "%PHP_INI%" "%~dp0artisan" migrate --force --seed
     echo.
+) else (
+    REM Safe to run every launch: does nothing if there's nothing pending.
+    REM This means a code update applied while the program was closed
+    REM (e.g. via update.bat) takes effect automatically next launch,
+    REM with no separate manual migration step required.
+    "%PHP_EXE%" -c "%PHP_INI%" "%~dp0artisan" migrate --force >nul 2>nul
 )
 
 start "" wscript.exe "%~dp0open_browser.vbs"
